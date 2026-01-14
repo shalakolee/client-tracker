@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Linq;
 using ClientTracker.Models;
 using ClientTracker.Services;
@@ -16,6 +17,9 @@ public class DashboardViewModel : ViewModelBase
     private decimal _outstandingCommissionAmount;
     private int _upcomingPaymentCount;
     private decimal _upcomingCommissionAmount;
+    private IReadOnlyList<double> _trendSales = Array.Empty<double>();
+    private IReadOnlyList<double> _trendCommission = Array.Empty<double>();
+    private IReadOnlyList<string> _trendLabels = Array.Empty<string>();
 
     public DashboardViewModel(DatabaseService database)
     {
@@ -77,6 +81,24 @@ public class DashboardViewModel : ViewModelBase
 
     public ObservableCollection<DashboardMonthSummary> MonthlySummaries { get; }
 
+    public IReadOnlyList<double> TrendSales
+    {
+        get => _trendSales;
+        set => SetProperty(ref _trendSales, value);
+    }
+
+    public IReadOnlyList<double> TrendCommission
+    {
+        get => _trendCommission;
+        set => SetProperty(ref _trendCommission, value);
+    }
+
+    public IReadOnlyList<string> TrendLabels
+    {
+        get => _trendLabels;
+        set => SetProperty(ref _trendLabels, value);
+    }
+
     public Command RefreshCommand { get; }
     public Command OpenClientsCommand { get; }
     public Command OpenSalesCommand { get; }
@@ -103,6 +125,7 @@ public class DashboardViewModel : ViewModelBase
         UpcomingCommissionAmount = upcomingPayments.Sum(p => p.Commission);
 
         BuildMonthlySummaries(sales, payments);
+        BuildTrends();
     }
 
     private void BuildMonthlySummaries(IReadOnlyCollection<Sale> sales, IReadOnlyCollection<Payment> payments)
@@ -132,6 +155,13 @@ public class DashboardViewModel : ViewModelBase
             summary.CommissionRatio = maxCommission == 0 ? 0 : (double)(summary.CommissionAmount / maxCommission);
             MonthlySummaries.Add(summary);
         }
+    }
+
+    private void BuildTrends()
+    {
+        TrendLabels = MonthlySummaries.Select(m => m.MonthLabel).ToArray();
+        TrendSales = MonthlySummaries.Select(m => (double)m.SalesAmount).ToArray();
+        TrendCommission = MonthlySummaries.Select(m => (double)m.CommissionAmount).ToArray();
     }
 }
 

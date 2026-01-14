@@ -3,6 +3,7 @@
     x:Class="ClientTracker.Pages.DashboardPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:controls="clr-namespace:ClientTracker.Controls"
     xmlns:services="clr-namespace:ClientTracker.Services"
     Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Title_Dashboard]}">
 
@@ -10,48 +11,110 @@
         <AppThemeBinding Light="{StaticResource AppBackgroundBrush}" Dark="{StaticResource AppBackgroundDarkBrush}" />
     </ContentPage.Background>
 
-    <ScrollView>
-        <VerticalStackLayout Padding="20" Spacing="16">
-            <Frame Style="{StaticResource CardFrame}">
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                    <VerticalStackLayout Spacing="6">
-                        <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Title_Dashboard]}" Style="{StaticResource SectionTitle}" />
-                        <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Dashboard_Subtitle]}" Style="{StaticResource MutedLabel}" />
-                    </VerticalStackLayout>
-                    <HorizontalStackLayout Grid.Column="1" Spacing="8" VerticalOptions="Center">
-                        <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Nav_Clients]}" Command="{Binding OpenClientsCommand}" Style="{StaticResource InlineButton}" />
-                        <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Nav_Sales]}" Command="{Binding OpenSalesCommand}" Style="{StaticResource InlineButton}" />
-                        <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Nav_PayCalendar]}" Command="{Binding OpenCalendarCommand}" Style="{StaticResource InlineButton}" />
-                    </HorizontalStackLayout>
-                </Grid>
-            </Frame>
+    <Grid RowDefinitions="Auto,*">
+        <controls:TopBar
+            Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Title_Dashboard]}"
+            Subtitle="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Dashboard_Subtitle]}">
+            <controls:TopBar.RightContent>
+                <Grid ColumnDefinitions="260,180,Auto" ColumnSpacing="10" VerticalOptions="Center">
+                    <Border BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource Gray950}}" Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource Gray600}}" StrokeThickness="1" Padding="12,10">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="14" />
+                        </Border.StrokeShape>
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                            <Image Source="icon_search.svg" WidthRequest="18" HeightRequest="18" Opacity="0.7" VerticalOptions="Center" />
+                            <Entry Grid.Column="1" Placeholder="Search…" BackgroundColor="Transparent" />
+                        </Grid>
+                    </Border>
 
-            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="16" RowSpacing="16">
-                <Frame Style="{StaticResource CardFrame}">
-                    <VerticalStackLayout Spacing="6">
-                        <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Dashboard_TotalClients]}" Style="{StaticResource MutedLabel}" />
-                        <Label Text="{Binding ClientCount}" FontSize="28" FontAttributes="Bold" />
-                    </VerticalStackLayout>
-                </Frame>
-                <Frame Style="{StaticResource CardFrame}" Grid.Column="1">
-                    <VerticalStackLayout Spacing="6">
-                        <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Dashboard_TotalSales]}" Style="{StaticResource MutedLabel}" />
-                        <Label Text="{Binding SaleCount}" FontSize="28" FontAttributes="Bold" />
-                    </VerticalStackLayout>
-                </Frame>
-                <Frame Style="{StaticResource CardFrame}" Grid.Row="1">
-                    <VerticalStackLayout Spacing="6">
-                        <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Dashboard_TotalRevenue]}" Style="{StaticResource MutedLabel}" />
-                        <Label Text="{Binding TotalSalesAmount, StringFormat='{0:C}'}" FontSize="28" FontAttributes="Bold" />
-                    </VerticalStackLayout>
-                </Frame>
-                <Frame Style="{StaticResource CardFrame}" Grid.Row="1" Grid.Column="1">
-                    <VerticalStackLayout Spacing="6">
-                        <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Dashboard_OutstandingCommission]}" Style="{StaticResource MutedLabel}" />
-                        <Label Text="{Binding OutstandingCommissionAmount, StringFormat='{0:C}'}" FontSize="28" FontAttributes="Bold" />
-                    </VerticalStackLayout>
-                </Frame>
-            </Grid>
+                    <Border Grid.Column="1" BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource Gray950}}" Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource Gray600}}" StrokeThickness="1" Padding="12,10">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="14" />
+                        </Border.StrokeShape>
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                            <Label Text="Filter" VerticalTextAlignment="Center" />
+                            <Label Grid.Column="1" Text="▾" Opacity="0.7" VerticalTextAlignment="Center" />
+                        </Grid>
+                    </Border>
+
+                    <Border Grid.Column="2" WidthRequest="42" HeightRequest="42" BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource Gray950}}" Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource Gray600}}" StrokeThickness="1" VerticalOptions="Center">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="14" />
+                        </Border.StrokeShape>
+                        <ImageButton Source="icon_bell.svg" BackgroundColor="Transparent" Padding="10" Command="{Binding RefreshCommand}" />
+                    </Border>
+                </Grid>
+            </controls:TopBar.RightContent>
+        </controls:TopBar>
+
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Padding="{StaticResource PagePadding}" Spacing="16">
+
+                <FlexLayout Wrap="Wrap" JustifyContent="SpaceBetween" AlignItems="Stretch">
+                    <Border Padding="16" StrokeThickness="0" Margin="0,0,0,12" FlexLayout.Basis="48%">
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                <GradientStop Color="#E0F2FE" Offset="0" />
+                                <GradientStop Color="#EEF2FF" Offset="1" />
+                            </LinearGradientBrush>
+                        </Border.Background>
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="18" />
+                        </Border.StrokeShape>
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Dashboard_TotalClients]}" Style="{StaticResource MutedLabel}" />
+                            <Label Text="{Binding ClientCount}" FontSize="30" FontAttributes="Bold" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border Padding="16" StrokeThickness="0" Margin="0,0,0,12" FlexLayout.Basis="48%">
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                <GradientStop Color="#ECFDF5" Offset="0" />
+                                <GradientStop Color="#E0F2FE" Offset="1" />
+                            </LinearGradientBrush>
+                        </Border.Background>
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="18" />
+                        </Border.StrokeShape>
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Dashboard_TotalSales]}" Style="{StaticResource MutedLabel}" />
+                            <Label Text="{Binding SaleCount}" FontSize="30" FontAttributes="Bold" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border Padding="16" StrokeThickness="0" Margin="0,0,0,12" FlexLayout.Basis="48%">
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                <GradientStop Color="#FFF7ED" Offset="0" />
+                                <GradientStop Color="#FEF3C7" Offset="1" />
+                            </LinearGradientBrush>
+                        </Border.Background>
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="18" />
+                        </Border.StrokeShape>
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Dashboard_TotalRevenue]}" Style="{StaticResource MutedLabel}" />
+                            <Label Text="{Binding TotalSalesAmount, StringFormat='{0:C}'}" FontSize="26" FontAttributes="Bold" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border Padding="16" StrokeThickness="0" Margin="0,0,0,12" FlexLayout.Basis="48%">
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                <GradientStop Color="#FCE7F3" Offset="0" />
+                                <GradientStop Color="#EEF2FF" Offset="1" />
+                            </LinearGradientBrush>
+                        </Border.Background>
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="18" />
+                        </Border.StrokeShape>
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Dashboard_OutstandingCommission]}" Style="{StaticResource MutedLabel}" />
+                            <Label Text="{Binding OutstandingCommissionAmount, StringFormat='{0:C}'}" FontSize="26" FontAttributes="Bold" />
+                        </VerticalStackLayout>
+                    </Border>
+                </FlexLayout>
 
             <Frame Style="{StaticResource CardFrame}">
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
@@ -72,37 +135,21 @@
                 </Grid>
             </Frame>
 
-            <Frame Style="{StaticResource CardFrame}">
-                <VerticalStackLayout Spacing="10">
-                    <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Dashboard_Trends]}" Style="{StaticResource SectionTitle}" />
-                    <CollectionView ItemsSource="{Binding MonthlySummaries}" SelectionMode="None">
-                        <CollectionView.ItemTemplate>
-                            <DataTemplate>
-                                <Border Stroke="{StaticResource BorderSubtle}" StrokeThickness="1" BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource Gray950}}">
-                                    <Border.StrokeShape>
-                                        <RoundRectangle CornerRadius="12" />
-                                    </Border.StrokeShape>
-                                    <VerticalStackLayout Padding="10" Spacing="8">
-                                        <Label Text="{Binding MonthLabel}" FontAttributes="Bold" />
-                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
-                                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Dashboard_Sales]}" Style="{StaticResource MutedLabel}" />
-                                            <ProgressBar Progress="{Binding SalesRatio}" Grid.Column="1" />
-                                            <Label Text="{Binding SalesAmount, StringFormat='{0:C}'}" Style="{StaticResource MutedLabel}" Grid.Column="2" HorizontalTextAlignment="End" />
-                                        </Grid>
-                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
-                                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Dashboard_Commission]}" Style="{StaticResource MutedLabel}" />
-                                            <ProgressBar Progress="{Binding CommissionRatio}" Grid.Column="1" />
-                                            <Label Text="{Binding CommissionAmount, StringFormat='{0:C}'}" Style="{StaticResource MutedLabel}" Grid.Column="2" HorizontalTextAlignment="End" />
-                                        </Grid>
-                                    </VerticalStackLayout>
-                                </Border>
-                            </DataTemplate>
-                        </CollectionView.ItemTemplate>
-                    </CollectionView>
-                </VerticalStackLayout>
-            </Frame>
-        </VerticalStackLayout>
-    </ScrollView>
+                <Frame Style="{StaticResource CardFrame}">
+                    <VerticalStackLayout Spacing="12">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Dashboard_Trends]}" Style="{StaticResource SectionTitle}" />
+                            <Label Text="Last 6 months" Style="{StaticResource MutedLabel}" Grid.Column="1" VerticalTextAlignment="Center" />
+                        </Grid>
+                        <controls:TrendChart
+                            Labels="{Binding TrendLabels}"
+                            SeriesA="{Binding TrendSales}"
+                            SeriesB="{Binding TrendCommission}" />
+                    </VerticalStackLayout>
+                </Frame>
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
 </ContentPage>
 
 

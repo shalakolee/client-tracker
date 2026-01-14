@@ -4,6 +4,7 @@
     x:Name="SettingsPageRoot"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:controls="clr-namespace:ClientTracker.Controls"
     xmlns:services="clr-namespace:ClientTracker.Services"
     Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Title_Settings]}">
 
@@ -11,8 +12,11 @@
         <AppThemeBinding Light="{StaticResource AppBackgroundBrush}" Dark="{StaticResource AppBackgroundDarkBrush}" />
     </ContentPage.Background>
 
-    <ScrollView>
-        <VerticalStackLayout Padding="24" Spacing="18">
+    <Grid RowDefinitions="Auto,*">
+        <controls:TopBar Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Title_Settings]}" />
+
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Padding="{StaticResource PagePadding}" Spacing="16">
             <Frame Style="{StaticResource CardFrame}">
                 <VerticalStackLayout Spacing="10">
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
@@ -71,18 +75,29 @@
                     <Entry Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_UpdateWindowsPattern]}" Text="{Binding WindowsAssetPattern}" />
                     <Entry Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_UpdateMacPattern]}" Text="{Binding MacAssetPattern}" />
                     <Entry Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_UpdateAndroidPattern]}" Text="{Binding AndroidAssetPattern}" />
-                    <HorizontalStackLayout Spacing="8">
-                        <CheckBox IsChecked="{Binding IncludePreReleases}" />
-                        <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_UpdatePreRelease]}" VerticalTextAlignment="Center" />
-                    </HorizontalStackLayout>
-                    <HorizontalStackLayout Spacing="8">
-                        <CheckBox IsChecked="{Binding RequireUpdates}" />
-                        <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_UpdateRequired]}" VerticalTextAlignment="Center" />
-                    </HorizontalStackLayout>
+                    <Border BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAlt}, Dark={StaticResource Gray900}}" StrokeThickness="0" Padding="12,10">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="14" />
+                        </Border.StrokeShape>
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_UpdatePreRelease]}" VerticalTextAlignment="Center" />
+                            <Switch IsToggled="{Binding IncludePreReleases}" Grid.Column="1" VerticalOptions="Center" />
+                        </Grid>
+                    </Border>
+                    <Border BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAlt}, Dark={StaticResource Gray900}}" StrokeThickness="0" Padding="12,10">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="14" />
+                        </Border.StrokeShape>
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_UpdateRequired]}" VerticalTextAlignment="Center" />
+                            <Switch IsToggled="{Binding RequireUpdates}" Grid.Column="1" VerticalOptions="Center" />
+                        </Grid>
+                    </Border>
                 </VerticalStackLayout>
             </Frame>
-        </VerticalStackLayout>
-    </ScrollView>
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
 </ContentPage>
 
 

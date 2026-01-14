@@ -1,14 +1,20 @@
-using System.Collections.ObjectModel;
+using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using ClientTracker.Models;
 using ContactModel = ClientTracker.Models.Contact;
 using ClientTracker.Services;
+using Microsoft.Maui.ApplicationModel;
 
 namespace ClientTracker.ViewModels;
 
 public class CalendarViewModel : ViewModelBase
 {
     private readonly DatabaseService _database;
+    private readonly SemaphoreSlim _loadGate = new(1, 1);
+    private bool _requestedInitialLoad;
     private DateTime _selectedMonth;
     private DateTime _monthPickerDate;
     private decimal _monthTotal;
@@ -19,26 +25,59 @@ public class CalendarViewModel : ViewModelBase
     private decimal _unpaidCommissionTotal;
     private int _paidPaymentCount;
     private int _unpaidPaymentCount;
+    private bool _isBusy;
+
+    private IReadOnlyList<PayDateSummary> _paySummaries = Array.Empty<PayDateSummary>();
+    private IReadOnlyList<PaymentScheduleItem> _paymentSchedule = Array.Empty<PaymentScheduleItem>();
+    private IReadOnlyList<CalendarDay> _calendarDays = Array.Empty<CalendarDay>();
+    private IReadOnlyList<PaymentScheduleItem> _selectedPayDatePayments = Array.Empty<PaymentScheduleItem>();
 
     public CalendarViewModel(DatabaseService database)
     {
         _database = database;
         _selectedMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
         _monthPickerDate = _selectedMonth;
-        PaySummaries = new ObservableCollection<PayDateSummary>();
-        PaymentSchedule = new ObservableCollection<PaymentScheduleItem>();
-        CalendarDays = new ObservableCollection<CalendarDay>();
-        SelectedPayDatePayments = new ObservableCollection<PaymentScheduleItem>();
 
         PreviousMonthCommand = new Command(async () => await ShiftMonthAsync(-1));
         NextMonthCommand = new Command(async () => await ShiftMonthAsync(1));
         RefreshCommand = new Command(async () => await LoadAsync());
+        SelectDayCommand = new Command<CalendarDay>(day => SelectedCalendarDay = day);
+
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            if (_requestedInitialLoad)
+            {
+                return;
+            }
+
+            _requestedInitialLoad = true;
+            _ = LoadAsync();
+        });
     }
 
-    public ObservableCollection<PayDateSummary> PaySummaries { get; }
-    public ObservableCollection<PaymentScheduleItem> PaymentSchedule { get; }
-    public ObservableCollection<CalendarDay> CalendarDays { get; }
-    public ObservableCollection<PaymentScheduleItem> SelectedPayDatePayments { get; }
+    public IReadOnlyList<PayDateSummary> PaySummaries
+    {
+        get => _paySummaries;
+        private set => SetProperty(ref _paySummaries, value);
+    }
+
+    public IReadOnlyList<PaymentScheduleItem> PaymentSchedule
+    {
+        get => _paymentSchedule;
+        private set => SetProperty(ref _paymentSchedule, value);
+    }
+
+    public IReadOnlyList<CalendarDay> CalendarDays
+    {
+        get => _calendarDays;
+        private set => SetProperty(ref _calendarDays, value);
+    }
+
+    public IReadOnlyList<PaymentScheduleItem> SelectedPayDatePayments
+    {
+        get => _selectedPayDatePayments;
+        private set => SetProperty(ref _selectedPayDatePayments, value);
+    }
 
     public DateTime SelectedMonth
     {
@@ -136,51 +175,103 @@ public class CalendarViewModel : ViewModelBase
         set => SetProperty(ref _unpaidPaymentCount, value);
     }
 
+    public bool IsBusy
+    {
+        get => _isBusy;
+        private set => SetProperty(ref _isBusy, value);
+    }
+
     public Command PreviousMonthCommand { get; }
     public Command NextMonthCommand { get; }
     public Command RefreshCommand { get; }
+    public Command<CalendarDay> SelectDayCommand { get; }
 
     public async Task LoadAsync()
     {
-        StatusMessage = string.Empty;
-        var payments = await _database.GetPaymentsForMonthAsync(SelectedMonth);
-        var sales = await _database.GetAllSalesAsync();
-        var clients = await _database.GetClientsAsync();
-        var contacts = await _database.GetAllContactsAsync();
-
-        var summaries = BuildPaySummaries(payments);
-        var scheduleItems = BuildScheduleItems(payments, sales, clients, contacts);
-        var calendarDays = BuildCalendarDays(SelectedMonth, payments);
-
-        PaySummaries.Clear();
-        foreach (var summary in summaries)
+        await _loadGate.WaitAsync();
+        try
         {
-            PaySummaries.Add(summary);
-        }
+            var month = SelectedMonth;
+            StartupLog.Write($"CalendarViewModel.LoadAsync start month={month:yyyy-MM} db={_database.DatabasePath}");
 
-        PaymentSchedule.Clear();
-        foreach (var item in scheduleItems)
+            await MainThread.InvokeOnMainThreadAsync(() =>
+            {
+                IsBusy = true;
+                StatusMessage = string.Empty;
+            });
+
+            var payments = await _database.GetPaymentsForMonthAsync(month).ConfigureAwait(false);
+            var sales = await _database.GetAllSalesAsync().ConfigureAwait(false);
+            var clients = await _database.GetClientsAsync().ConfigureAwait(false);
+            var contacts = await _database.GetAllContactsAsync().ConfigureAwait(false);
+
+            var result = await Task.Run(() =>
+            {
+                var summaries = BuildPaySummaries(payments);
+                var scheduleItems = BuildScheduleItems(payments, sales, clients, contacts);
+                var calendarDays = BuildCalendarDays(month, payments);
+                var monthTotal = summaries.Sum(s => s.TotalCommission);
+                return (summaries, scheduleItems, calendarDays, monthTotal);
+            }).ConfigureAwait(false);
+
+            await MainThread.InvokeOnMainThreadAsync(() =>
+            {
+                PaySummaries = result.summaries;
+                PaymentSchedule = result.scheduleItems;
+                CalendarDays = result.calendarDays;
+                MonthTotal = result.monthTotal;
+                OnPropertyChanged(nameof(MonthLabel));
+
+                if (SelectedCalendarDay is not null)
+                {
+                    var selectedDate = SelectedCalendarDay.Date.Date;
+                    SelectedCalendarDay = CalendarDays.FirstOrDefault(d => d.Date.Date == selectedDate);
+                }
+                else
+                {
+                    SelectedCalendarDay = CalendarDays.FirstOrDefault(d => d.IsPayDate);
+                }
+
+                UpdateSelectedPayDatePayments();
+                RecalculateTotals();
+
+                if (payments.Count == 0)
+                {
+                    StatusMessage = "No payments found for this month.";
+                }
+            });
+
+            if (payments.Count == 0)
+            {
+                var totalPaymentCount = await _database.GetPaymentCountAsync().ConfigureAwait(false);
+                if (totalPaymentCount == 0)
+                {
+                    await MainThread.InvokeOnMainThreadAsync(() =>
+                        StatusMessage = "No payments yet. Create a sale to generate a payment schedule.");
+                }
+                else
+                {
+                    var range = await _database.GetPaymentPayDateRangeAsync().ConfigureAwait(false);
+                    if (range.MinPayDate is not null && range.MaxPayDate is not null)
+                    {
+                        await MainThread.InvokeOnMainThreadAsync(() =>
+                            StatusMessage = $"No payments found for {month:MMMM yyyy}. Existing pay dates: {range.MinPayDate.Value:d} – {range.MaxPayDate.Value:d}.");
+                    }
+                }
+            }
+
+            StartupLog.Write($"CalendarViewModel.LoadAsync done payments={payments.Count} schedule={result.scheduleItems.Count} days={result.calendarDays.Count}");
+        }
+        catch (Exception ex)
         {
-            PaymentSchedule.Add(item);
+            StartupLog.Write(ex, "CalendarViewModel.LoadAsync");
+            await MainThread.InvokeOnMainThreadAsync(() => StatusMessage = "Unable to load payment calendar.");
         }
-
-        CalendarDays.Clear();
-        foreach (var day in calendarDays)
+        finally
         {
-            CalendarDays.Add(day);
+            await MainThread.InvokeOnMainThreadAsync(() => IsBusy = false);
+            _loadGate.Release();
         }
-
-        MonthTotal = summaries.Sum(s => s.TotalCommission);
-        OnPropertyChanged(nameof(MonthLabel));
-
-        if (SelectedCalendarDay is not null)
-        {
-            var selectedDate = SelectedCalendarDay.Date.Date;
-            SelectedCalendarDay = CalendarDays.FirstOrDefault(d => d.Date.Date == selectedDate);
-        }
-
-        UpdateSelectedPayDatePayments();
-        RecalculateTotals();
     }
 
     private async Task ShiftMonthAsync(int offset)
@@ -258,10 +349,10 @@ public class CalendarViewModel : ViewModelBase
 
     private void UpdateSelectedPayDatePayments()
     {
-        SelectedPayDatePayments.Clear();
         if (SelectedCalendarDay is null || SelectedCalendarDay.CommissionTotal <= 0m)
         {
             SelectedPayDateLabel = LocalizationResourceManager.Instance["PayCalendar_SelectDatePrompt"];
+            SelectedPayDatePayments = Array.Empty<PaymentScheduleItem>();
             return;
         }
 
@@ -272,10 +363,7 @@ public class CalendarViewModel : ViewModelBase
             .ThenBy(p => p.PaymentDate)
             .ToList();
 
-        foreach (var item in matches)
-        {
-            SelectedPayDatePayments.Add(item);
-        }
+        SelectedPayDatePayments = matches;
 
         var labelTemplate = LocalizationResourceManager.Instance["PayCalendar_SelectedDatePayments"];
         SelectedPayDateLabel = string.Format(labelTemplate, selectedDate.ToString("MMMM dd, yyyy"));

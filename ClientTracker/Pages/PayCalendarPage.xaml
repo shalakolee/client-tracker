@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <ContentPage
+    x:Name="PayCalendarPageRoot"
     x:Class="ClientTracker.Pages.PayCalendarPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:controls="clr-namespace:ClientTracker.Controls"
     xmlns:services="clr-namespace:ClientTracker.Services"
     Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Title_PayCalendar]}">
 
@@ -10,25 +12,44 @@
         <AppThemeBinding Light="{StaticResource AppBackgroundBrush}" Dark="{StaticResource AppBackgroundDarkBrush}" />
     </ContentPage.Background>
 
-    <ScrollView>
-        <VerticalStackLayout Padding="20" Spacing="16">
-            <Frame Style="{StaticResource CardFrame}">
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                    <VerticalStackLayout Spacing="6">
-                        <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[PayCalendar_Header]}" Style="{StaticResource SectionTitle}" />
-                        <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[PayCalendar_Subtitle]}" Style="{StaticResource MutedLabel}" />
-                    </VerticalStackLayout>
-                    <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Refresh]}" Command="{Binding RefreshCommand}" Grid.Column="1" Style="{StaticResource InlineButton}" />
+    <Grid RowDefinitions="Auto,*">
+        <controls:TopBar
+            Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[PayCalendar_Header]}"
+            Subtitle="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[PayCalendar_Subtitle]}">
+            <controls:TopBar.RightContent>
+                <Grid>
+                    <HorizontalStackLayout Spacing="8" VerticalOptions="Center" IsVisible="{OnIdiom Phone=False, Default=True}">
+                        <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Prev]}" Command="{Binding PreviousMonthCommand}" Style="{StaticResource SecondaryButton}" />
+                        <Border BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource Gray950}}" Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource Gray600}}" StrokeThickness="1" Padding="12,10">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="14" />
+                            </Border.StrokeShape>
+                            <Label Text="{Binding MonthLabel}" FontAttributes="Bold" />
+                        </Border>
+                        <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Next]}" Command="{Binding NextMonthCommand}" Style="{StaticResource SecondaryButton}" />
+                        <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Refresh]}" Command="{Binding RefreshCommand}" Style="{StaticResource SecondaryButton}" />
+                    </HorizontalStackLayout>
+                    <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Refresh]}" Command="{Binding RefreshCommand}" Style="{StaticResource SecondaryButton}" IsVisible="{OnIdiom Phone=True, Default=False}" />
                 </Grid>
-            </Frame>
+            </controls:TopBar.RightContent>
+        </controls:TopBar>
 
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Padding="{StaticResource PagePadding}" Spacing="16">
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" HorizontalOptions="Center" />
+            <Label Text="{Binding StatusMessage}" TextColor="{StaticResource Tertiary}">
+                <Label.Triggers>
+                    <DataTrigger TargetType="Label" Binding="{Binding StatusMessage}" Value="">
+                        <Setter Property="IsVisible" Value="False" />
+                    </DataTrigger>
+                </Label.Triggers>
+            </Label>
             <Frame Style="{StaticResource CardFrame}">
                 <VerticalStackLayout Spacing="12">
-                    <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" IsVisible="{OnIdiom Phone=True, Default=False}">
                         <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Prev]}" Command="{Binding PreviousMonthCommand}" Style="{StaticResource InlineButton}" />
-                        <Label Text="{Binding MonthLabel}" FontAttributes="Bold" Grid.Column="1" VerticalOptions="Center" />
+                        <Label Text="{Binding MonthLabel}" FontAttributes="Bold" Grid.Column="1" VerticalOptions="Center" HorizontalTextAlignment="Center" />
                         <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Next]}" Command="{Binding NextMonthCommand}" Style="{StaticResource InlineButton}" Grid.Column="2" />
-                        <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Refresh]}" Command="{Binding RefreshCommand}" Style="{StaticResource InlineButton}" Grid.Column="3" />
                     </Grid>
                     <VerticalStackLayout Spacing="6">
                         <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[PayCalendar_SelectMonth]}" Style="{StaticResource MutedLabel}" />
@@ -50,45 +71,65 @@
                             <VerticalStackLayout Spacing="4">
                                 <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[PayCalendar_Paid]}" Style="{StaticResource MutedLabel}" />
                                 <Label Text="{Binding PaidCommissionTotal, StringFormat='{0:C}'}" FontSize="20" FontAttributes="Bold" />
-                                <Label Text="{Binding PaidPaymentCount, StringFormat='{0} payments'}" Style="{StaticResource MutedLabel}" />
+                                <Label Style="{StaticResource MutedLabel}">
+                                    <Label.FormattedText>
+                                        <FormattedString>
+                                            <Span Text="{Binding PaidPaymentCount}" FontAttributes="Bold" />
+                                            <Span Text=" " />
+                                            <Span Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Sale_Payments]}" />
+                                        </FormattedString>
+                                    </Label.FormattedText>
+                                </Label>
                             </VerticalStackLayout>
                         </Frame>
                         <Frame Style="{StaticResource CardFrame}" Grid.Column="1">
                             <VerticalStackLayout Spacing="4">
                                 <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[PayCalendar_Unpaid]}" Style="{StaticResource MutedLabel}" />
                                 <Label Text="{Binding UnpaidCommissionTotal, StringFormat='{0:C}'}" FontSize="20" FontAttributes="Bold" />
-                                <Label Text="{Binding UnpaidPaymentCount, StringFormat='{0} payments'}" Style="{StaticResource MutedLabel}" />
+                                <Label Style="{StaticResource MutedLabel}">
+                                    <Label.FormattedText>
+                                        <FormattedString>
+                                            <Span Text="{Binding UnpaidPaymentCount}" FontAttributes="Bold" />
+                                            <Span Text=" " />
+                                            <Span Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Sale_Payments]}" />
+                                        </FormattedString>
+                                    </Label.FormattedText>
+                                </Label>
                             </VerticalStackLayout>
                         </Frame>
                         <Frame Style="{StaticResource CardFrame}" Grid.Column="2">
                             <VerticalStackLayout Spacing="4">
                                 <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[PayCalendar_Total]}" Style="{StaticResource MutedLabel}" />
                                 <Label Text="{Binding MonthTotal, StringFormat='{0:C}'}" FontSize="20" FontAttributes="Bold" />
-                                <Label Text="{Binding PaySummaries.Count, StringFormat='{0} pay dates'}" Style="{StaticResource MutedLabel}" />
                             </VerticalStackLayout>
                         </Frame>
                     </Grid>
 
                     <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[PayCalendar_Summary]}" Style="{StaticResource SectionTitle}" />
-                    <CollectionView ItemsSource="{Binding PaySummaries}" SelectionMode="None">
-                        <CollectionView.ItemsLayout>
-                            <LinearItemsLayout Orientation="Vertical" ItemSpacing="8" />
-                        </CollectionView.ItemsLayout>
-                        <CollectionView.ItemTemplate>
+                    <VerticalStackLayout Spacing="8" BindableLayout.ItemsSource="{Binding PaySummaries}">
+                        <BindableLayout.ItemTemplate>
                             <DataTemplate>
                                 <Border Stroke="{StaticResource BorderSubtle}" StrokeThickness="1" BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource Gray950}}">
                                     <Border.StrokeShape>
                                         <RoundRectangle CornerRadius="12" />
                                     </Border.StrokeShape>
                                     <Grid Padding="10" ColumnDefinitions="Auto,*,Auto">
-                                        <Label Text="{Binding PayDate, StringFormat='{0:MMM dd, yyyy}'}" />
-                                        <Label Text="{Binding PaymentCount, StringFormat='{0} payments'}" Style="{StaticResource MutedLabel}" Grid.Column="1" HorizontalTextAlignment="Center" />
+                                        <Label Text="{Binding PayDate, StringFormat='{0:d}'}" />
+                                        <Label Style="{StaticResource MutedLabel}" Grid.Column="1" HorizontalTextAlignment="Center">
+                                            <Label.FormattedText>
+                                                <FormattedString>
+                                                    <Span Text="{Binding PaymentCount}" FontAttributes="Bold" />
+                                                    <Span Text=" " />
+                                                    <Span Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Sale_Payments]}" />
+                                                </FormattedString>
+                                            </Label.FormattedText>
+                                        </Label>
                                         <Label Text="{Binding TotalCommission, StringFormat='{0:C}'}" FontAttributes="Bold" Grid.Column="2" HorizontalTextAlignment="End" />
                                     </Grid>
                                 </Border>
                             </DataTemplate>
-                        </CollectionView.ItemTemplate>
-                    </CollectionView>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
                 </VerticalStackLayout>
             </Frame>
 
@@ -105,49 +146,15 @@
                         <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Day_Sat]}" HorizontalTextAlignment="Center" Style="{StaticResource MutedLabel}" Grid.Column="6" />
                     </Grid>
 
-                    <CollectionView ItemsSource="{Binding CalendarDays}" SelectionMode="Single" SelectedItem="{Binding SelectedCalendarDay}">
-                        <CollectionView.ItemsLayout>
-                            <GridItemsLayout Span="7" Orientation="Vertical" />
-                        </CollectionView.ItemsLayout>
-                        <CollectionView.ItemTemplate>
-                            <DataTemplate>
-                                <Border Stroke="{StaticResource BorderSubtle}" StrokeThickness="1" BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource Gray950}}">
-                                    <Border.StrokeShape>
-                                        <RoundRectangle CornerRadius="12" />
-                                    </Border.StrokeShape>
-                                    <Border.Triggers>
-                                        <DataTrigger TargetType="Border" Binding="{Binding IsCurrentMonth}" Value="False">
-                                            <Setter Property="Opacity" Value="0.4" />
-                                        </DataTrigger>
-                                        <DataTrigger TargetType="Border" Binding="{Binding IsPayDate}" Value="True">
-                                            <Setter Property="BackgroundColor" Value="#E0F2F1" />
-                                            <Setter Property="Stroke" Value="{StaticResource Primary}" />
-                                        </DataTrigger>
-                                        <DataTrigger TargetType="Border" Binding="{Binding IsSelected}" Value="True">
-                                            <Setter Property="BackgroundColor" Value="{StaticResource Secondary}" />
-                                            <Setter Property="Stroke" Value="{StaticResource Tertiary}" />
-                                        </DataTrigger>
-                                    </Border.Triggers>
-                                    <VerticalStackLayout Padding="6" Spacing="2">
-                                        <Label Text="{Binding DayLabel}" FontAttributes="Bold" />
-                                        <Label Text="{Binding CommissionTotal, StringFormat='{0:C}'}" FontSize="11" IsVisible="{Binding IsPayDate}" />
-                                        <Label Text="{Binding PaymentCount, StringFormat='{0} pays'}" Style="{StaticResource MutedLabel}" IsVisible="{Binding IsPayDate}" />
-                                    </VerticalStackLayout>
-                                </Border>
-                            </DataTemplate>
-                        </CollectionView.ItemTemplate>
-                    </CollectionView>
+                    <controls:CalendarGrid ItemsSource="{Binding CalendarDays}" DayTappedCommand="{Binding SelectDayCommand}" />
                 </VerticalStackLayout>
             </Frame>
 
             <Frame Style="{StaticResource CardFrame}">
                 <VerticalStackLayout Spacing="12">
                     <Label Text="{Binding SelectedPayDateLabel}" Style="{StaticResource SectionTitle}" />
-                    <CollectionView ItemsSource="{Binding SelectedPayDatePayments}" SelectionMode="None">
-                        <CollectionView.ItemsLayout>
-                            <LinearItemsLayout Orientation="Vertical" ItemSpacing="8" />
-                        </CollectionView.ItemsLayout>
-                        <CollectionView.ItemTemplate>
+                    <VerticalStackLayout Spacing="8" BindableLayout.ItemsSource="{Binding SelectedPayDatePayments}">
+                        <BindableLayout.ItemTemplate>
                             <DataTemplate>
                                 <Border Stroke="{StaticResource BorderSubtle}" StrokeThickness="1" BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource Gray950}}">
                                     <Border.StrokeShape>
@@ -156,7 +163,17 @@
                                     <Grid Padding="10" ColumnDefinitions="*,Auto" ColumnSpacing="10">
                                         <VerticalStackLayout Spacing="2">
                                             <Label Text="{Binding ClientName}" FontAttributes="Bold" LineBreakMode="TailTruncation" />
-                                            <Label Text="{Binding InvoiceNumber, StringFormat='Invoice #{0}'}" Style="{StaticResource MutedLabel}" LineBreakMode="TailTruncation" />
+                                            <Border BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAlt}, Dark={StaticResource Gray900}}" StrokeThickness="0" Padding="10,4">
+                                                <Border.StrokeShape>
+                                                    <RoundRectangle CornerRadius="999" />
+                                                </Border.StrokeShape>
+                                                <Border.Triggers>
+                                                    <DataTrigger TargetType="Border" Binding="{Binding InvoiceNumber}" Value="">
+                                                        <Setter Property="IsVisible" Value="False" />
+                                                    </DataTrigger>
+                                                </Border.Triggers>
+                                                <Label Text="{Binding InvoiceNumber}" Style="{StaticResource MutedLabel}" LineBreakMode="TailTruncation" />
+                                            </Border>
                                             <Label Text="{Binding ContactName}" Style="{StaticResource MutedLabel}" LineBreakMode="TailTruncation" />
                                         </VerticalStackLayout>
                                         <VerticalStackLayout Grid.Column="1" Spacing="4" HorizontalOptions="End">
@@ -181,19 +198,16 @@
                                     </Grid>
                                 </Border>
                             </DataTemplate>
-                        </CollectionView.ItemTemplate>
-                    </CollectionView>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
                 </VerticalStackLayout>
             </Frame>
 
             <Frame Style="{StaticResource CardFrame}">
                 <VerticalStackLayout Spacing="12">
                     <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[PayCalendar_PaySchedule]}" Style="{StaticResource SectionTitle}" />
-                    <CollectionView ItemsSource="{Binding PaymentSchedule}" SelectionMode="None">
-                        <CollectionView.ItemsLayout>
-                            <LinearItemsLayout Orientation="Vertical" ItemSpacing="8" />
-                        </CollectionView.ItemsLayout>
-                        <CollectionView.ItemTemplate>
+                    <VerticalStackLayout Spacing="8" BindableLayout.ItemsSource="{Binding PaymentSchedule}">
+                        <BindableLayout.ItemTemplate>
                             <DataTemplate>
                                 <Border Stroke="{StaticResource BorderSubtle}" StrokeThickness="1" BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource Gray950}}">
                                     <Border.StrokeShape>
@@ -202,12 +216,22 @@
                                     <Grid Padding="10" ColumnDefinitions="*,Auto" ColumnSpacing="10">
                                         <VerticalStackLayout Spacing="2">
                                             <Label Text="{Binding ClientName}" FontAttributes="Bold" LineBreakMode="TailTruncation" />
-                                            <Label Text="{Binding InvoiceNumber, StringFormat='Invoice #{0}'}" Style="{StaticResource MutedLabel}" LineBreakMode="TailTruncation" />
+                                            <Border BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAlt}, Dark={StaticResource Gray900}}" StrokeThickness="0" Padding="10,4">
+                                                <Border.StrokeShape>
+                                                    <RoundRectangle CornerRadius="999" />
+                                                </Border.StrokeShape>
+                                                <Border.Triggers>
+                                                    <DataTrigger TargetType="Border" Binding="{Binding InvoiceNumber}" Value="">
+                                                        <Setter Property="IsVisible" Value="False" />
+                                                    </DataTrigger>
+                                                </Border.Triggers>
+                                                <Label Text="{Binding InvoiceNumber}" Style="{StaticResource MutedLabel}" LineBreakMode="TailTruncation" />
+                                            </Border>
                                             <Label Text="{Binding ContactName}" Style="{StaticResource MutedLabel}" LineBreakMode="TailTruncation" />
                                         </VerticalStackLayout>
                                         <VerticalStackLayout Grid.Column="1" Spacing="4" HorizontalOptions="End">
                                             <Label Text="{Binding Commission, StringFormat='{0:C}'}" FontAttributes="Bold" HorizontalTextAlignment="End" />
-                                            <Label Text="{Binding PayDate, StringFormat='{0:MMM dd}'}" Style="{StaticResource MutedLabel}" HorizontalTextAlignment="End" />
+                                            <Label Text="{Binding PayDate, StringFormat='{0:d}'}" Style="{StaticResource MutedLabel}" HorizontalTextAlignment="End" />
                                             <HorizontalStackLayout Spacing="6" HorizontalOptions="End">
                                                 <Label Style="{StaticResource MutedLabel}">
                                                     <Label.FormattedText>
@@ -228,12 +252,13 @@
                                     </Grid>
                                 </Border>
                             </DataTemplate>
-                        </CollectionView.ItemTemplate>
-                    </CollectionView>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
 
                     <Label Text="{Binding StatusMessage}" TextColor="{StaticResource Tertiary}" />
                 </VerticalStackLayout>
             </Frame>
-        </VerticalStackLayout>
-    </ScrollView>
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
 </ContentPage>

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentView
+    x:Class="ClientTracker.Controls.TopBar"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:services="clr-namespace:ClientTracker.Services"
+    x:Name="Root">
+    <Grid Padding="{StaticResource PagePadding}" RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+        <Border WidthRequest="40" HeightRequest="40" BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource Gray950}}" Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource Gray600}}" StrokeThickness="1" VerticalOptions="Center">
+            <Border.StrokeShape>
+                <RoundRectangle CornerRadius="14" />
+            </Border.StrokeShape>
+            <ImageButton
+                BackgroundColor="Transparent"
+                Clicked="OnMenuClicked"
+                Source="nav_dashboard.svg"
+                Padding="10"
+                WidthRequest="40"
+                HeightRequest="40" />
+        </Border>
+
+        <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+            <Label Text="{Binding Title, Source={x:Reference Root}}" FontSize="22" FontFamily="OpenSansSemibold" />
+            <Label Text="{Binding Subtitle, Source={x:Reference Root}}" Style="{StaticResource MutedLabel}" IsVisible="{Binding HasSubtitle, Source={x:Reference Root}}" />
+        </VerticalStackLayout>
+
+        <HorizontalStackLayout Grid.Column="2" Spacing="8" VerticalOptions="Center" HorizontalOptions="End">
+            <ContentPresenter Content="{Binding RightContent, Source={x:Reference Root}}" />
+            <Border WidthRequest="38" HeightRequest="38" BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAlt}, Dark={StaticResource Gray950}}" StrokeThickness="0" VerticalOptions="Center">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="999" />
+                </Border.StrokeShape>
+                <Image Source="avatar.svg" WidthRequest="18" HeightRequest="18" HorizontalOptions="Center" VerticalOptions="Center" Opacity="0.9" />
+            </Border>
+        </HorizontalStackLayout>
+
+        <Border Grid.Row="1" Grid.ColumnSpan="3"
+                IsVisible="{Binding IsSearchVisible, Source={x:Reference Root}}"
+                BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource Gray950}}"
+                Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource Gray600}}"
+                StrokeThickness="1"
+                Padding="12,10">
+            <Border.StrokeShape>
+                <RoundRectangle CornerRadius="14" />
+            </Border.StrokeShape>
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                <Image Source="nav_sales.svg" WidthRequest="18" HeightRequest="18" Opacity="0.7" VerticalOptions="Center" />
+                <Entry Grid.Column="1"
+                       Placeholder="{Binding SearchPlaceholder, Source={x:Reference Root}}"
+                       Text="{Binding SearchText, Source={x:Reference Root}, Mode=TwoWay}"
+                       BackgroundColor="Transparent" />
+            </Grid>
+        </Border>
+    </Grid>
+</ContentView>

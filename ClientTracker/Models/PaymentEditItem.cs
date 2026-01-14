@@ -1,4 +1,5 @@
 using ClientTracker.ViewModels;
+using System.Globalization;
 
 namespace ClientTracker.Models;
 
@@ -6,6 +7,7 @@ public class PaymentEditItem : ViewModelBase
 {
     private DateTime _paymentDate;
     private decimal _amount;
+    private string _amountText = string.Empty;
     private bool _isPaid;
     private decimal _commission;
     private DateTime _payDate;
@@ -23,7 +25,35 @@ public class PaymentEditItem : ViewModelBase
     public decimal Amount
     {
         get => _amount;
-        set => SetProperty(ref _amount, value);
+        set
+        {
+            if (SetProperty(ref _amount, value))
+            {
+                var formatted = _amount.ToString("0.00", CultureInfo.CurrentCulture);
+                if (_amountText != formatted)
+                {
+                    _amountText = formatted;
+                    OnPropertyChanged(nameof(AmountText));
+                }
+            }
+        }
+    }
+
+    public string AmountText
+    {
+        get => string.IsNullOrWhiteSpace(_amountText)
+            ? Amount.ToString("0.00", CultureInfo.CurrentCulture)
+            : _amountText;
+        set
+        {
+            if (SetProperty(ref _amountText, value))
+            {
+                if (decimal.TryParse(value, NumberStyles.Number, CultureInfo.CurrentCulture, out var parsed))
+                {
+                    Amount = parsed;
+                }
+            }
+        }
     }
 
     public decimal Commission

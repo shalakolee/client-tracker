@@ -5,6 +5,7 @@ public partial class AppShell : Shell
 	public AppShell()
 	{
 		InitializeComponent();
+		BindingContext = new ViewModels.ShellViewModel();
 		Routing.RegisterRoute("client-view", typeof(Pages.ClientViewPage));
 		Routing.RegisterRoute("client-edit", typeof(Pages.ClientEditPage));
 		Routing.RegisterRoute("sale-details", typeof(Pages.SaleDetailsPage));

@@ -3,31 +3,53 @@
     x:Class="ClientTracker.Pages.ContactEditPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:controls="clr-namespace:ClientTracker.Controls"
     xmlns:services="clr-namespace:ClientTracker.Services"
     Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Title_ContactEdit]}">
+
+    <ContentPage.Resources>
+        <services:InverseBoolConverter x:Key="InverseBoolConverter" />
+    </ContentPage.Resources>
 
         <ContentPage.Background>
         <AppThemeBinding Light="{StaticResource AppBackgroundBrush}" Dark="{StaticResource AppBackgroundDarkBrush}" />
     </ContentPage.Background>
 
-    <ScrollView>
-        <VerticalStackLayout Padding="24" Spacing="18">
-            <Frame Style="{StaticResource CardFrame}">
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                    <VerticalStackLayout Spacing="6">
-                        <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Title_ContactEdit]}" Style="{StaticResource SectionTitle}" />
-                        <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Contacts_Subtitle]}" Style="{StaticResource MutedLabel}" />
-                    </VerticalStackLayout>
-                    <HorizontalStackLayout Grid.Column="1" Spacing="8">
-                        <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Save]}" Command="{Binding SaveCommand}" Style="{StaticResource InlineButton}" />
-                        <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Delete]}" Command="{Binding DeleteCommand}" Style="{StaticResource InlineDangerButton}" />
-                    </HorizontalStackLayout>
-                </Grid>
-            </Frame>
+    <Grid RowDefinitions="Auto,*">
+        <controls:TopBar
+            Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Title_ContactEdit]}"
+            Subtitle="{Binding SelectedClient.Name}">
+            <controls:TopBar.RightContent>
+                <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
+                    <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Save]}" Command="{Binding SaveCommand}" Style="{StaticResource BaseButton}" />
+                    <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Delete]}" Command="{Binding DeleteCommand}" Style="{StaticResource DangerButton}" />
+                </HorizontalStackLayout>
+            </controls:TopBar.RightContent>
+        </controls:TopBar>
 
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Padding="{StaticResource PagePadding}" Spacing="16">
             <Frame Style="{StaticResource CardFrame}">
                 <VerticalStackLayout Spacing="10">
-                    <Picker Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Title_Clients]}" ItemsSource="{Binding Clients}" ItemDisplayBinding="{Binding Name}" SelectedItem="{Binding SelectedClient}" IsEnabled="{Binding CanSelectClient}" />
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Title_Clients]}" Style="{StaticResource MutedLabel}" />
+                        <Picker
+                            Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Title_Clients]}"
+                            ItemsSource="{Binding Clients}"
+                            ItemDisplayBinding="{Binding Name}"
+                            SelectedItem="{Binding SelectedClient}"
+                            IsVisible="{Binding CanSelectClient}" />
+                        <Border
+                            BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAlt}, Dark={StaticResource Gray900}}"
+                            StrokeThickness="0"
+                            Padding="12,10"
+                            IsVisible="{Binding CanSelectClient, Converter={StaticResource InverseBoolConverter}}">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="14" />
+                            </Border.StrokeShape>
+                            <Label Text="{Binding SelectedClient.Name}" />
+                        </Border>
+                    </VerticalStackLayout>
                     <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
                         <Entry Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Contact_Name]}" Text="{Binding Name}" />
                         <Entry Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Contact_Phone]}" Keyboard="Telephone" Text="{Binding Phone}" Grid.Column="1" />
@@ -38,8 +60,9 @@
             </Frame>
 
             <Label Text="{Binding StatusMessage}" TextColor="{StaticResource Tertiary}" />
-        </VerticalStackLayout>
-    </ScrollView>
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
 </ContentPage>
 
 

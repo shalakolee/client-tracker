@@ -10,6 +10,7 @@ public class ContactEditViewModel : ViewModelBase
 {
     private readonly DatabaseService _database;
     private int _contactId;
+    private int _lockedClientId;
     private string _name = string.Empty;
     private string _email = string.Empty;
     private string _phone = string.Empty;
@@ -83,6 +84,7 @@ public class ContactEditViewModel : ViewModelBase
     public async Task LoadAsync(int? contactId = null, int? clientId = null)
     {
         StatusMessage = string.Empty;
+        _lockedClientId = 0;
         var clients = await _database.GetClientsAsync();
         Clients.Clear();
         foreach (var client in clients)
@@ -100,6 +102,7 @@ public class ContactEditViewModel : ViewModelBase
             }
 
             ContactId = contact.Id;
+            _lockedClientId = contact.ClientId;
             Name = contact.Name;
             Email = contact.Email;
             Phone = contact.Phone;
@@ -109,6 +112,7 @@ public class ContactEditViewModel : ViewModelBase
         else
         {
             ContactId = 0;
+            _lockedClientId = 0;
             Name = string.Empty;
             Email = string.Empty;
             Phone = string.Empty;
@@ -162,7 +166,10 @@ public class ContactEditViewModel : ViewModelBase
                 return;
             }
 
-            contact.ClientId = SelectedClient.Id;
+            if (_lockedClientId > 0)
+            {
+                contact.ClientId = _lockedClientId;
+            }
             contact.Name = Name.Trim();
             contact.Email = Email.Trim();
             contact.Phone = Phone.Trim();

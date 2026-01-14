@@ -6,33 +6,53 @@
     xmlns:views="clr-namespace:ClientTracker.Pages"
     xmlns:services="clr-namespace:ClientTracker.Services"
     Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[App_Title]}"
-    FlyoutBehavior="Flyout">
+    FlyoutBehavior="{OnPlatform Default=Flyout, WinUI=Locked, MacCatalyst=Locked}"
+    Shell.NavBarIsVisible="False"
+    FlyoutWidth="296"
+    FlyoutBackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource OffBlack}}">
 
     <Shell.FlyoutHeader>
-        <Grid Padding="24,32,24,20" BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource OffBlack}}">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-            </Grid.RowDefinitions>
-            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[App_Title]}" Style="{StaticResource FlyoutTitle}" />
-            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[App_Subtitle]}" Style="{StaticResource FlyoutSubtitle}" Grid.Row="1" />
+        <Grid Padding="20,28,20,16" ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="12">
+            <Border WidthRequest="36" HeightRequest="36" BackgroundColor="{StaticResource Primary}" StrokeThickness="0" VerticalOptions="Center">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="12" />
+                </Border.StrokeShape>
+                <Image Source="logo_mark.svg" WidthRequest="18" HeightRequest="18" HorizontalOptions="Center" VerticalOptions="Center" />
+            </Border>
+            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[App_Title]}" Style="{StaticResource FlyoutTitle}" Grid.Column="1" />
+            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[App_Subtitle]}" Style="{StaticResource FlyoutSubtitle}" Grid.Column="1" Grid.Row="1" />
         </Grid>
     </Shell.FlyoutHeader>
 
-    <FlyoutItem Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Nav_Dashboard]}" Route="Dashboard">
+    <FlyoutItem Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Nav_Dashboard]}" Route="Dashboard" Icon="nav_dashboard.svg">
         <ShellContent ContentTemplate="{DataTemplate views:DashboardPage}" Route="DashboardPage" />
     </FlyoutItem>
-    <FlyoutItem Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Nav_Clients]}" Route="Clients">
+    <FlyoutItem Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Nav_Clients]}" Route="Clients" Icon="nav_clients.svg">
         <ShellContent ContentTemplate="{DataTemplate views:ClientsPage}" Route="ClientsPage" />
     </FlyoutItem>
-    <FlyoutItem Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Nav_Sales]}" Route="Sales">
+    <FlyoutItem Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Nav_Sales]}" Route="Sales" Icon="nav_sales.svg">
         <ShellContent ContentTemplate="{DataTemplate views:SalesPage}" Route="SalesPage" />
     </FlyoutItem>
-    <FlyoutItem Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Nav_PayCalendar]}" Route="PayCalendar">
+    <FlyoutItem Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Nav_PayCalendar]}" Route="PayCalendar" Icon="nav_calendar.svg">
         <ShellContent ContentTemplate="{DataTemplate views:PayCalendarPage}" Route="PayCalendarPage" />
     </FlyoutItem>
-    <FlyoutItem Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Nav_Settings]}" Route="Settings">
+    <FlyoutItem Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Nav_Settings]}" Route="Settings" Icon="nav_settings.svg">
         <ShellContent ContentTemplate="{DataTemplate views:SettingsPage}" Route="SettingsPage" />
     </FlyoutItem>
+
+    <Shell.FlyoutFooter>
+        <Grid Padding="20,12,20,20" ColumnDefinitions="Auto,*" ColumnSpacing="12">
+            <Border WidthRequest="34" HeightRequest="34" BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAlt}, Dark={StaticResource Gray950}}" StrokeThickness="0" VerticalOptions="Center">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="999" />
+                </Border.StrokeShape>
+                <Image Source="avatar.svg" WidthRequest="18" HeightRequest="18" HorizontalOptions="Center" VerticalOptions="Center" />
+            </Border>
+            <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[App_Title]}" FontAttributes="Bold" FontSize="13" />
+                <Label Text="v1.0" Style="{StaticResource MutedLabel}" FontSize="12" />
+            </VerticalStackLayout>
+        </Grid>
+    </Shell.FlyoutFooter>
 
 </Shell>

@@ -1,6 +1,7 @@
 using ClientTracker.Models;
 using ContactModel = ClientTracker.Models.Contact;
 using ClientTracker.Services;
+using System.Linq;
 
 namespace ClientTracker.ViewModels;
 
@@ -44,7 +45,13 @@ public class ContactDetailsViewModel : ViewModelBase
     public string ContactName
     {
         get => _contactName;
-        set => SetProperty(ref _contactName, value);
+        set
+        {
+            if (SetProperty(ref _contactName, value))
+            {
+                OnPropertyChanged(nameof(ContactInitials));
+            }
+        }
     }
 
     public string ContactEmail
@@ -72,6 +79,29 @@ public class ContactDetailsViewModel : ViewModelBase
     }
 
     public string NotesDisplay => string.IsNullOrWhiteSpace(Notes) ? "No notes added." : Notes;
+
+    public string ContactInitials
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(ContactName))
+            {
+                return "?";
+            }
+
+            var parts = ContactName
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Take(2)
+                .ToArray();
+
+            if (parts.Length == 0)
+            {
+                return "?";
+            }
+
+            return string.Concat(parts.Select(p => p.Length > 0 ? char.ToUpperInvariant(p[0]) : '?'));
+        }
+    }
 
     public string StatusMessage
     {

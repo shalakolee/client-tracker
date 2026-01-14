@@ -52,9 +52,10 @@
     <SolidColorBrush x:Key="Gray900Brush" Color="{StaticResource Gray900}"/>
     <SolidColorBrush x:Key="Gray950Brush" Color="{StaticResource Gray950}"/>
 
+    <!-- Light background closer to modern admin dashboards -->
     <LinearGradientBrush x:Key="AppBackgroundBrush" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="#F8FAFC" Offset="0.0" />
-        <GradientStop Color="#EEF2FF" Offset="1.0" />
+        <GradientStop Color="#F7F8FB" Offset="0.0" />
+        <GradientStop Color="#F3F4FF" Offset="1.0" />
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="AppBackgroundDarkBrush" StartPoint="0,0" EndPoint="1,1">

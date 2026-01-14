@@ -3,6 +3,7 @@
     x:Class="ClientTracker.Pages.ContactDetailsPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:controls="clr-namespace:ClientTracker.Controls"
     xmlns:services="clr-namespace:ClientTracker.Services"
     Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Title_ContactDetails]}">
 
@@ -10,31 +11,49 @@
         <AppThemeBinding Light="{StaticResource AppBackgroundBrush}" Dark="{StaticResource AppBackgroundDarkBrush}" />
     </ContentPage.Background>
 
-    <ScrollView>
-        <VerticalStackLayout Padding="22" Spacing="16">
-            <Frame Style="{StaticResource CardFrame}">
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                    <VerticalStackLayout Spacing="6">
-                        <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Title_ContactDetails]}" Style="{StaticResource SectionTitle}" />
-                        <Label Text="{Binding ContactName}" FontSize="20" FontAttributes="Bold" />
-                        <Label Text="{Binding ClientName}" Style="{StaticResource MutedLabel}" />
-                    </VerticalStackLayout>
-                    <HorizontalStackLayout Grid.Column="1" Spacing="8" VerticalOptions="Start">
-                        <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Edit]}" Command="{Binding EditCommand}" Style="{StaticResource InlineButton}" />
-                        <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Delete]}" Command="{Binding DeleteCommand}" Style="{StaticResource InlineDangerButton}" />
-                    </HorizontalStackLayout>
-                </Grid>
-            </Frame>
+    <Grid RowDefinitions="Auto,*">
+        <controls:TopBar Title="{Binding ContactName}" Subtitle="{Binding ClientName}">
+            <controls:TopBar.RightContent>
+                <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
+                    <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Edit]}" Command="{Binding EditCommand}" Style="{StaticResource SecondaryButton}" />
+                    <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Delete]}" Command="{Binding DeleteCommand}" Style="{StaticResource DangerButton}" />
+                </HorizontalStackLayout>
+            </controls:TopBar.RightContent>
+        </controls:TopBar>
 
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Padding="{StaticResource PagePadding}" Spacing="16">
             <Frame Style="{StaticResource CardFrame}">
-                <VerticalStackLayout Spacing="10">
-                    <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="8">
-                        <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Contact_Email]}" Style="{StaticResource MutedLabel}" />
-                        <Label Text="{Binding ContactEmail}" LineBreakMode="TailTruncation" Grid.Column="1" />
-                        <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Contact_Phone]}" Style="{StaticResource MutedLabel}" Grid.Row="1" />
-                        <Label Text="{Binding ContactPhone}" LineBreakMode="TailTruncation" Grid.Row="1" Grid.Column="1" />
-                    </Grid>
-                </VerticalStackLayout>
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14">
+                    <Border WidthRequest="52" HeightRequest="52" BackgroundColor="{AppThemeBinding Light=#EEF2FF, Dark={StaticResource Gray900}}" StrokeThickness="0" VerticalOptions="Start">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="26" />
+                        </Border.StrokeShape>
+                        <Label Text="{Binding ContactInitials}" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center" />
+                    </Border>
+                    <VerticalStackLayout Grid.Column="1" Spacing="10">
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                            <Border BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAlt}, Dark={StaticResource Gray900}}" StrokeThickness="0" Padding="12,10">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="14" />
+                                </Border.StrokeShape>
+                                <VerticalStackLayout Spacing="2">
+                                    <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Contact_Email]}" Style="{StaticResource MutedLabel}" />
+                                    <Label Text="{Binding ContactEmail}" LineBreakMode="TailTruncation" />
+                                </VerticalStackLayout>
+                            </Border>
+                            <Border Grid.Column="1" BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAlt}, Dark={StaticResource Gray900}}" StrokeThickness="0" Padding="12,10">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="14" />
+                                </Border.StrokeShape>
+                                <VerticalStackLayout Spacing="2">
+                                    <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Contact_Phone]}" Style="{StaticResource MutedLabel}" />
+                                    <Label Text="{Binding ContactPhone}" LineBreakMode="TailTruncation" />
+                                </VerticalStackLayout>
+                            </Border>
+                        </Grid>
+                    </VerticalStackLayout>
+                </Grid>
             </Frame>
 
             <Frame Style="{StaticResource CardFrame}">
@@ -45,8 +64,9 @@
             </Frame>
 
             <Label Text="{Binding StatusMessage}" TextColor="{StaticResource Tertiary}" />
-        </VerticalStackLayout>
-    </ScrollView>
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
 </ContentPage>
 
 

@@ -42,6 +42,7 @@ public class ClientEditViewModel : ViewModelBase
         Sales = new ObservableCollection<SaleEntry>();
 
         SaveClientCommand = new Command(async () => await SaveClientAsync());
+        OpenClientCommand = new Command(async () => await OpenClientAsync(), () => ClientId > 0);
         AddContactCommand = new Command(async () => await AddContactAsync(), () => ClientId > 0);
         SaveContactCommand = new Command(async () => await SaveContactAsync(), () => SelectedContact is not null);
         DeleteContactCommand = new Command(async () => await DeleteContactAsync(), () => SelectedContact is not null);
@@ -59,6 +60,7 @@ public class ClientEditViewModel : ViewModelBase
             if (SetProperty(ref _clientId, value))
             {
                 SaveClientCommand.ChangeCanExecute();
+                OpenClientCommand.ChangeCanExecute();
                 AddContactCommand.ChangeCanExecute();
                 AddSaleCommand.ChangeCanExecute();
             }
@@ -229,6 +231,7 @@ public class ClientEditViewModel : ViewModelBase
     public bool IsExistingClient => ClientId > 0;
 
     public Command SaveClientCommand { get; }
+    public Command OpenClientCommand { get; }
     public Command AddContactCommand { get; }
     public Command SaveContactCommand { get; }
     public Command DeleteContactCommand { get; }
@@ -308,6 +311,7 @@ public class ClientEditViewModel : ViewModelBase
             PageTitle = LocalizationResourceManager.Instance["Title_ClientEdit"];
             StatusMessage = "Client created.";
             SaveClientCommand.ChangeCanExecute();
+            OpenClientCommand.ChangeCanExecute();
             AddContactCommand.ChangeCanExecute();
             AddSaleCommand.ChangeCanExecute();
             OnPropertyChanged(nameof(IsExistingClient));
@@ -333,6 +337,16 @@ public class ClientEditViewModel : ViewModelBase
             await _database.UpdateClientAsync(client);
             StatusMessage = "Client details saved.";
         }
+    }
+
+    private async Task OpenClientAsync()
+    {
+        if (ClientId <= 0)
+        {
+            return;
+        }
+
+        await Shell.Current.GoToAsync($"client-view?clientId={ClientId}");
     }
 
     private async Task LoadContactsAsync()

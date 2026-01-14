@@ -840,6 +840,27 @@ public class DatabaseService
         return await _db.QueryAsync<Payment>(sql);
     }
 
+    public async Task<int> GetPaymentCountAsync()
+    {
+        await EnsureInitializedAsync();
+        return await _db.Table<Payment>().Where(p => !p.IsDeleted).CountAsync();
+    }
+
+    public async Task<(DateTime? MinPayDate, DateTime? MaxPayDate)> GetPaymentPayDateRangeAsync()
+    {
+        await EnsureInitializedAsync();
+        var payments = await _db.Table<Payment>()
+            .Where(p => !p.IsDeleted)
+            .ToListAsync();
+
+        if (payments.Count == 0)
+        {
+            return (null, null);
+        }
+
+        return (payments.Min(p => p.PayDate), payments.Max(p => p.PayDate));
+    }
+
     public async Task UpdatePaymentDetailsAsync(Payment payment)
     {
         await EnsureInitializedAsync();

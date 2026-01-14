@@ -3,6 +3,7 @@
     x:Class="ClientTracker.Pages.SaleDetailsPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:controls="clr-namespace:ClientTracker.Controls"
     xmlns:services="clr-namespace:ClientTracker.Services"
     Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Title_SaleDetails]}">
 
@@ -10,21 +11,20 @@
         <AppThemeBinding Light="{StaticResource AppBackgroundBrush}" Dark="{StaticResource AppBackgroundDarkBrush}" />
     </ContentPage.Background>
 
-    <ScrollView>
-        <VerticalStackLayout Padding="24" Spacing="18">
-            <Frame Style="{StaticResource CardFrame}">
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                    <VerticalStackLayout Spacing="6">
-                        <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Sale_Details]}" Style="{StaticResource SectionTitle}" />
-                        <Label Text="{Binding ClientName}" FontAttributes="Bold" FontSize="18" />
-                    </VerticalStackLayout>
-                    <HorizontalStackLayout Grid.Column="1" Spacing="8" VerticalOptions="Start">
-                        <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_SaveSale]}" Command="{Binding SaveSaleCommand}" Style="{StaticResource InlineButton}" />
-                        <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Delete]}" Command="{Binding DeleteSaleCommand}" Style="{StaticResource InlineDangerButton}" />
-                    </HorizontalStackLayout>
-                </Grid>
-            </Frame>
+    <Grid RowDefinitions="Auto,*">
+        <controls:TopBar
+            Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Sale_Details]}"
+            Subtitle="{Binding ClientName}">
+            <controls:TopBar.RightContent>
+                <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
+                    <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_SaveSale]}" Command="{Binding SaveSaleCommand}" Style="{StaticResource SecondaryButton}" />
+                    <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Delete]}" Command="{Binding DeleteSaleCommand}" Style="{StaticResource DangerButton}" />
+                </HorizontalStackLayout>
+            </controls:TopBar.RightContent>
+        </controls:TopBar>
 
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Padding="{StaticResource PagePadding}" Spacing="16">
             <Frame Style="{StaticResource CardFrame}">
                 <VerticalStackLayout Spacing="10">
                     <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Sale_Editor]}" Style="{StaticResource SectionTitle}" />
@@ -57,16 +57,42 @@
                                     <Border.StrokeShape>
                                         <RoundRectangle CornerRadius="12" />
                                     </Border.StrokeShape>
-                                    <Grid Padding="10" ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                                        <VerticalStackLayout Spacing="4">
-                                            <Label Text="{Binding PaymentNumber, StringFormat='Payment #{0}'}" FontAttributes="Bold" />
-                                            <DatePicker Date="{Binding PaymentDate}" />
-                                            <Entry Text="{Binding Amount, StringFormat='{0:C}'}" Keyboard="Numeric" />
+                                    <Grid Padding="12" ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                        <VerticalStackLayout Spacing="10">
+                                            <Label FontAttributes="Bold">
+                                                <Label.FormattedText>
+                                                    <FormattedString>
+                                                        <Span Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[PayCalendar_PaymentLabel]}" />
+                                                        <Span Text=" #" />
+                                                        <Span Text="{Binding PaymentNumber}" />
+                                                        <Span Text=" " />
+                                                        <Span Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[PayCalendar_DueLabel]}" />
+                                                        <Span Text=" " />
+                                                        <Span Text="{Binding PaymentDate, StringFormat='{0:d}'}" />
+                                                    </FormattedString>
+                                                </Label.FormattedText>
+                                            </Label>
+
+                                            <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                                                <DatePicker Date="{Binding PaymentDate}" />
+                                                <Entry
+                                                    Grid.Column="1"
+                                                    Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Payment_Amount]}"
+                                                    Text="{Binding AmountText}"
+                                                    Keyboard="Numeric" />
+                                            </Grid>
                                         </VerticalStackLayout>
-                                        <VerticalStackLayout Grid.Column="1" Spacing="6" HorizontalOptions="End">
-                                            <Label Text="{Binding PayDate, StringFormat='{0:MMM dd}'}" Style="{StaticResource MutedLabel}" HorizontalTextAlignment="End" />
+
+                                        <VerticalStackLayout Grid.Column="1" Spacing="10" HorizontalOptions="End">
+                                            <Border BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAlt}, Dark={StaticResource Gray900}}" StrokeThickness="0" Padding="10,6">
+                                                <Border.StrokeShape>
+                                                    <RoundRectangle CornerRadius="999" />
+                                                </Border.StrokeShape>
+                                                <Label Text="{Binding Commission, StringFormat='{0:C}'}" FontAttributes="Bold" />
+                                            </Border>
+                                            <Label Text="{Binding PayDate, StringFormat='{0:d}'}" Style="{StaticResource MutedLabel}" HorizontalTextAlignment="End" />
                                             <HorizontalStackLayout Spacing="6" HorizontalOptions="End">
-                                                <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Payment_Paid]}" Style="{StaticResource MutedLabel}" />
+                                                <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Payment_Paid]}" Style="{StaticResource MutedLabel}" VerticalTextAlignment="Center" />
                                                 <CheckBox IsChecked="{Binding IsPaid}" VerticalOptions="Center" />
                                             </HorizontalStackLayout>
                                         </VerticalStackLayout>
@@ -79,8 +105,9 @@
             </Frame>
 
             <Label Text="{Binding StatusMessage}" TextColor="{StaticResource Tertiary}" />
-        </VerticalStackLayout>
-    </ScrollView>
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
 </ContentPage>
 
 

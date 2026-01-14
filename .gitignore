@@ -24,3 +24,4 @@ Thumbs.db
 
 # Database (if generated)
 data/*.db3
+ClientTracker/data/*.db3
