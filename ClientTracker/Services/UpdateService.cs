@@ -1,4 +1,6 @@
 using System.Net.Http.Headers;
+using System.IO.Compression;
+using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Controls.Shapes;
@@ -70,13 +72,13 @@ public class UpdateService
 
             if (choice == UpdateChoice.Download)
             {
-                await DownloadAndLaunchAsync(assetUrl);
+                await DownloadAndLaunchAsync(release.TagName, assetUrl);
             }
             return;
         }
     }
 
-    private async Task DownloadAndLaunchAsync(string url)
+    private async Task DownloadAndLaunchAsync(string releaseTag, string url)
     {
         var page = CreateProgressPage(out var statusLabel, out var progressBar);
         await MainThread.InvokeOnMainThreadAsync(() => Shell.Current.Navigation.PushModalAsync(page));
@@ -107,8 +109,108 @@ public class UpdateService
         }
 
         await UpdateStatusAsync(statusLabel, _localization["Update_Preparing"]);
-        await Launcher.OpenAsync(new OpenFileRequest("Update", new ReadOnlyFile(targetPath)));
+
+        if (string.Equals(PathIO.GetExtension(targetPath), ".zip", StringComparison.OrdinalIgnoreCase))
+        {
+            var updateRoot = PathIO.Combine(FileSystem.AppDataDirectory, "updates", SanitizeFolderName(releaseTag));
+            Directory.CreateDirectory(updateRoot);
+
+            await UpdateStatusAsync(statusLabel, _localization["Update_Extracting"]);
+            try
+            {
+                if (Directory.Exists(updateRoot))
+                {
+                    foreach (var existing in Directory.GetFiles(updateRoot, "*", SearchOption.AllDirectories))
+                    {
+                        File.SetAttributes(existing, FileAttributes.Normal);
+                    }
+                }
+
+                if (Directory.Exists(updateRoot))
+                {
+                    Directory.Delete(updateRoot, true);
+                }
+
+                Directory.CreateDirectory(updateRoot);
+                ZipFile.ExtractToDirectory(targetPath, updateRoot, overwriteFiles: true);
+            }
+            catch
+            {
+                ZipFile.ExtractToDirectory(targetPath, updateRoot);
+            }
+
+            var launched = await TryLaunchExtractedAsync(updateRoot);
+            if (launched)
+            {
+                await MainThread.InvokeOnMainThreadAsync(() => Shell.Current.Navigation.PopModalAsync());
+                QuitApp();
+                return;
+            }
+
+            await ShowAlertAsync(_localization["Update_Title"], _localization["Update_ManualLaunch"]);
+        }
+        else
+        {
+            await Launcher.OpenAsync(new OpenFileRequest("Update", new ReadOnlyFile(targetPath)));
+        }
+
         await MainThread.InvokeOnMainThreadAsync(() => Shell.Current.Navigation.PopModalAsync());
+    }
+
+    private static string SanitizeFolderName(string value)
+    {
+        foreach (var c in PathIO.GetInvalidFileNameChars())
+        {
+            value = value.Replace(c, '-');
+        }
+
+        return value.Trim();
+    }
+
+    private static void QuitApp()
+    {
+        try
+        {
+            Application.Current?.Quit();
+        }
+        catch
+        {
+            // best-effort
+        }
+
+        Environment.Exit(0);
+    }
+
+    private Task<bool> TryLaunchExtractedAsync(string folder)
+    {
+#if WINDOWS
+        var exe = Directory.GetFiles(folder, "*.exe", SearchOption.AllDirectories)
+            .OrderByDescending(f => string.Equals(PathIO.GetFileName(f), "ClientTracker.exe", StringComparison.OrdinalIgnoreCase))
+            .FirstOrDefault();
+
+        if (string.IsNullOrWhiteSpace(exe))
+        {
+            return Task.FromResult(false);
+        }
+
+        Process.Start(new ProcessStartInfo(exe)
+        {
+            UseShellExecute = true,
+            WorkingDirectory = PathIO.GetDirectoryName(exe)
+        });
+
+        return Task.FromResult(true);
+#elif MACCATALYST
+        var app = Directory.GetDirectories(folder, "*.app", SearchOption.AllDirectories).FirstOrDefault();
+        if (string.IsNullOrWhiteSpace(app))
+        {
+            return Task.FromResult(false);
+        }
+
+        return Launcher.OpenAsync(new OpenFileRequest("Update", new ReadOnlyFile(app)));
+#else
+        return Task.FromResult(false);
+#endif
     }
 
     private async Task<GitHubRelease?> GetLatestReleaseAsync(UpdateSettings settings)

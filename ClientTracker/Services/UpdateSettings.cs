@@ -14,9 +14,9 @@ public class UpdateSettings
 
     public string GitHubOwner { get; set; } = string.Empty;
     public string GitHubRepo { get; set; } = string.Empty;
-    public string WindowsAssetPattern { get; set; } = "msix;exe";
-    public string MacAssetPattern { get; set; } = "dmg;pkg";
-    public string AndroidAssetPattern { get; set; } = "apk";
+    public string WindowsAssetPattern { get; set; } = "win-x64;windows;zip;msix;exe";
+    public string MacAssetPattern { get; set; } = "maccatalyst;mac;zip;dmg;pkg";
+    public string AndroidAssetPattern { get; set; } = "android;apk";
     public bool IncludePreReleases { get; set; }
     public bool RequireUpdates { get; set; }
 
@@ -29,9 +29,9 @@ public class UpdateSettings
         {
             GitHubOwner = Preferences.Get(OwnerKey, string.Empty),
             GitHubRepo = Preferences.Get(RepoKey, string.Empty),
-            WindowsAssetPattern = Preferences.Get(WindowsPatternKey, "msix;exe"),
-            MacAssetPattern = Preferences.Get(MacPatternKey, "dmg;pkg"),
-            AndroidAssetPattern = Preferences.Get(AndroidPatternKey, "apk"),
+            WindowsAssetPattern = Preferences.Get(WindowsPatternKey, "win-x64;windows;zip;msix;exe"),
+            MacAssetPattern = Preferences.Get(MacPatternKey, "maccatalyst;mac;zip;dmg;pkg"),
+            AndroidAssetPattern = Preferences.Get(AndroidPatternKey, "android;apk"),
             IncludePreReleases = Preferences.Get(IncludePreReleaseKey, false),
             RequireUpdates = Preferences.Get(RequireUpdatesKey, false)
         };

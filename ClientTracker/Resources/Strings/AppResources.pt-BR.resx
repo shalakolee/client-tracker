@@ -197,6 +197,8 @@
   <data name="Update_Notes" xml:space="preserve"><value>Notas da release</value></data>
   <data name="Update_Downloading" xml:space="preserve"><value>Baixando atualizacao...</value></data>
   <data name="Update_Preparing" xml:space="preserve"><value>Preparando instalador...</value></data>
+  <data name="Update_Extracting" xml:space="preserve"><value>Extraindo atualizacao...</value></data>
+  <data name="Update_ManualLaunch" xml:space="preserve"><value>Atualizacao baixada, mas nao foi possivel iniciar automaticamente. Abra o arquivo baixado manualmente.</value></data>
   <data name="Update_Progress" xml:space="preserve"><value>{0}%</value></data>
   <data name="Update_Ok" xml:space="preserve"><value>OK</value></data>
   <data name="Update_Download" xml:space="preserve"><value>Baixar</value></data>

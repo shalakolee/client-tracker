@@ -197,6 +197,8 @@
   <data name="Update_Notes" xml:space="preserve"><value>Release notes</value></data>
   <data name="Update_Downloading" xml:space="preserve"><value>Downloading update...</value></data>
   <data name="Update_Preparing" xml:space="preserve"><value>Preparing installer...</value></data>
+  <data name="Update_Extracting" xml:space="preserve"><value>Extracting update...</value></data>
+  <data name="Update_ManualLaunch" xml:space="preserve"><value>Update downloaded, but it couldn't be launched automatically. Please open the downloaded file manually.</value></data>
   <data name="Update_Progress" xml:space="preserve"><value>{0}%</value></data>
   <data name="Update_Ok" xml:space="preserve"><value>OK</value></data>
   <data name="Update_Download" xml:space="preserve"><value>Download</value></data>
