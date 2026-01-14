@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage
+    x:Class="ClientTracker.Pages.ContactsPage"
+    x:Name="ContactsPageRoot"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:services="clr-namespace:ClientTracker.Services"
+    Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Title_Contacts]}">
+
+        <ContentPage.Background>
+        <AppThemeBinding Light="{StaticResource AppBackgroundBrush}" Dark="{StaticResource AppBackgroundDarkBrush}" />
+    </ContentPage.Background>
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="16">
+            <Frame Style="{StaticResource CardFrame}">
+                <VerticalStackLayout Spacing="10">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Title_Contacts]}" Style="{StaticResource SectionTitle}" />
+                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Contacts_Subtitle]}" Style="{StaticResource MutedLabel}" />
+                        </VerticalStackLayout>
+                        <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Add]}" Command="{Binding AddContactCommand}" Grid.Column="1" Style="{StaticResource InlineButton}" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                        <Entry Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Contacts_SearchPlaceholder]}" Text="{Binding SearchText}" />
+                        <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Search]}" Command="{Binding LoadCommand}" Style="{StaticResource InlineButton}" />
+                    </Grid>
+                    <Grid ColumnDefinitions="2*,Auto" ColumnSpacing="10">
+                        <Picker
+                            Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Contacts_Filter_Client]}"
+                            ItemsSource="{Binding ClientFilters}"
+                            SelectedItem="{Binding SelectedClientFilter}">
+                            <Picker.ItemDisplayBinding>
+                                <Binding Path="DisplayName" />
+                            </Picker.ItemDisplayBinding>
+                        </Picker>
+                        <HorizontalStackLayout Grid.Column="1" Spacing="8" VerticalOptions="Center">
+                            <CheckBox IsChecked="{Binding NotesOnly}" />
+                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Contacts_Filter_Notes]}" VerticalTextAlignment="Center" />
+                        </HorizontalStackLayout>
+                    </Grid>
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame Style="{StaticResource CardFrame}">
+                <VerticalStackLayout Spacing="10">
+                    <CollectionView ItemsSource="{Binding Contacts}" SelectionMode="None">
+                        <CollectionView.ItemsLayout>
+                            <LinearItemsLayout Orientation="Vertical" ItemSpacing="10" />
+                        </CollectionView.ItemsLayout>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <Border Stroke="{StaticResource BorderSubtle}" StrokeThickness="1" BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource Gray950}}">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="14" />
+                                    </Border.StrokeShape>
+                                    <VerticalStackLayout Padding="12" Spacing="8">
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                            <VerticalStackLayout Spacing="2">
+                                                <Label Text="{Binding Name}" FontAttributes="Bold" />
+                                                <Label Text="{Binding ClientName}" Style="{StaticResource MutedLabel}" />
+                                            </VerticalStackLayout>
+                                            <Label Text="{Binding Phone}" Style="{StaticResource MutedLabel}" Grid.Column="1" HorizontalTextAlignment="End" />
+                                        </Grid>
+                                        <Label Text="{Binding Email}" Style="{StaticResource MutedLabel}" />
+                                        <Label Text="{Binding Notes}" Style="{StaticResource MutedLabel}" LineBreakMode="TailTruncation" MaxLines="2" />
+                                        <HorizontalStackLayout Spacing="8">
+                                            <Button
+                                                Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_View]}"
+                                                Command="{Binding BindingContext.ViewContactCommand, Source={x:Reference ContactsPageRoot}}"
+                                                CommandParameter="{Binding .}"
+                                                Style="{StaticResource InlineButton}" />
+                                            <Button
+                                                Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Edit]}"
+                                                Command="{Binding BindingContext.EditContactCommand, Source={x:Reference ContactsPageRoot}}"
+                                                CommandParameter="{Binding .}"
+                                                Style="{StaticResource InlineButton}" />
+                                            <Button
+                                                Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Delete]}"
+                                                Command="{Binding BindingContext.DeleteContactCommand, Source={x:Reference ContactsPageRoot}}"
+                                                CommandParameter="{Binding .}"
+                                                Style="{StaticResource InlineDangerButton}" />
+                                        </HorizontalStackLayout>
+                                    </VerticalStackLayout>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+            </Frame>
+
+            <Label Text="{Binding StatusMessage}" TextColor="{StaticResource Tertiary}" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
+
+

@@ -1,0 +1,28 @@
+﻿<maui:MauiWinUIApplication
+    x:Class="ClientTracker.WinUI.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:maui="using:Microsoft.Maui"
+    xmlns:local="using:ClientTracker.WinUI">
+
+    <maui:MauiWinUIApplication.Resources>
+        <ResourceDictionary>
+            <SolidColorBrush x:Key="SystemControlHighlightAccentBrush" Color="#1D4ED8" />
+            <SolidColorBrush x:Key="SystemControlHighlightAccentBrush1" Color="#E6F0FF" />
+            <SolidColorBrush x:Key="SystemControlHighlightAccentBrush2" Color="#BFDBFE" />
+            <SolidColorBrush x:Key="SystemControlHighlightAccentBrush3" Color="#93C5FD" />
+            <SolidColorBrush x:Key="SystemControlHighlightAccentBrush4" Color="#60A5FA" />
+            <SolidColorBrush x:Key="SystemControlForegroundAccentBrush" Color="#1D4ED8" />
+            <SolidColorBrush x:Key="SystemControlForegroundAccentBrush1" Color="#1E40AF" />
+            <SolidColorBrush x:Key="SystemControlForegroundAccentBrush2" Color="#1D4ED8" />
+            <SolidColorBrush x:Key="SystemControlForegroundAccentBrush3" Color="#3B82F6" />
+            <SolidColorBrush x:Key="SystemControlForegroundAccentBrush4" Color="#60A5FA" />
+            <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="#1D4ED8" />
+            <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="#93C5FD" />
+            <SolidColorBrush x:Key="TextControlBorderBrush" Color="#CCD5E2" />
+            <SolidColorBrush x:Key="ControlFocusVisualPrimaryBrush" Color="#1D4ED8" />
+            <SolidColorBrush x:Key="ControlFocusVisualSecondaryBrush" Color="#93C5FD" />
+        </ResourceDictionary>
+    </maui:MauiWinUIApplication.Resources>
+
+</maui:MauiWinUIApplication>

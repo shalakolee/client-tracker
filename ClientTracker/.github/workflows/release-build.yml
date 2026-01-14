@@ -1,0 +1,122 @@
+name: Build Release Assets
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  DOTNET_VERSION: 10.0.100-rc.1.25451.107
+  PROJECT_PATH: ClientTracker/ClientTracker.csproj
+  CONFIGURATION: Release
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Install Android workload
+        run: dotnet workload install maui-android
+      - name: Publish Android
+        run: dotnet publish "${PROJECT_PATH}" -c "${CONFIGURATION}" -f net10.0-android -p:AndroidPackageFormat=apk
+      - name: Collect Android artifact
+        shell: bash
+        run: |
+          mkdir -p artifacts
+          APK_PATH=$(find ClientTracker/bin/Release/net10.0-android -name "*.apk" | head -n 1)
+          if [ -z "$APK_PATH" ]; then
+            echo "No APK found."
+            exit 1
+          fi
+          cp "$APK_PATH" "artifacts/ClientTracker-android.apk"
+      - name: Upload Android artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: artifacts/ClientTracker-android.apk
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      - name: Install Windows workload
+        run: dotnet workload install maui-windows
+      - name: Publish Windows
+        run: dotnet publish "$env:PROJECT_PATH" -c "$env:CONFIGURATION" -f net10.0-windows10.0.19041.0 -r win-x64 -p:WindowsPackageType=MSIX -p:GenerateAppxPackageOnBuild=true -p:AppxPackageSigningEnabled=false
+      - name: Collect Windows artifact
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "artifacts" -Force | Out-Null
+          $msix = Get-ChildItem -Path "ClientTracker/bin/Release/net10.0-windows10.0.19041.0/win-x64" -Recurse -Filter *.msix | Select-Object -First 1
+          if (-not $msix) {
+            throw "MSIX package not found."
+          }
+          Copy-Item $msix.FullName -Destination "artifacts/ClientTracker-windows.msix" -Force
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: artifacts/ClientTracker-windows.msix
+
+  build-maccatalyst:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      - name: Install MacCatalyst workload
+        run: dotnet workload install maui-maccatalyst
+      - name: Publish MacCatalyst
+        run: dotnet publish "${PROJECT_PATH}" -c "${CONFIGURATION}" -f net10.0-maccatalyst -r maccatalyst-x64
+      - name: Collect MacCatalyst artifact
+        shell: bash
+        run: |
+          mkdir -p artifacts
+          APP_PATH=$(find ClientTracker/bin/Release/net10.0-maccatalyst/maccatalyst-x64/publish -maxdepth 1 -name "*.app" | head -n 1)
+          if [ -z "$APP_PATH" ]; then
+            echo "No .app bundle found."
+            exit 1
+          fi
+          DMG_DIR=$(mktemp -d)
+          cp -R "$APP_PATH" "$DMG_DIR/"
+          hdiutil create -volname "ClientTracker" -srcfolder "$DMG_DIR" -ov -format UDZO "artifacts/ClientTracker-maccatalyst.dmg"
+      - name: Upload MacCatalyst artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: maccatalyst
+          path: artifacts/ClientTracker-maccatalyst.dmg
+
+  publish-release:
+    runs-on: ubuntu-latest
+    needs: [build-android, build-windows, build-maccatalyst]
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*

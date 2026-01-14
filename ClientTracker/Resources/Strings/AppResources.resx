@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="Nav_Dashboard" xml:space="preserve"><value>Dashboard</value></data>
+  <data name="Nav_Clients" xml:space="preserve"><value>Clients</value></data>
+  <data name="Nav_Contacts" xml:space="preserve"><value>Contacts</value></data>
+  <data name="Nav_Sales" xml:space="preserve"><value>Sales</value></data>
+  <data name="Nav_PayCalendar" xml:space="preserve"><value>Pay Calendar</value></data>
+  <data name="Nav_Settings" xml:space="preserve"><value>Settings</value></data>
+  <data name="App_Title" xml:space="preserve"><value>Client Tracker</value></data>
+  <data name="App_Subtitle" xml:space="preserve"><value>Client operations workspace</value></data>
+
+  <data name="Title_Dashboard" xml:space="preserve"><value>Dashboard</value></data>
+  <data name="Title_Clients" xml:space="preserve"><value>Clients</value></data>
+  <data name="Title_Contacts" xml:space="preserve"><value>Contacts</value></data>
+  <data name="Title_Sales" xml:space="preserve"><value>Sales</value></data>
+  <data name="Title_PayCalendar" xml:space="preserve"><value>Pay Calendar</value></data>
+  <data name="Title_Client" xml:space="preserve"><value>Client</value></data>
+  <data name="Title_ClientEdit" xml:space="preserve"><value>Edit Client</value></data>
+  <data name="Title_ClientNew" xml:space="preserve"><value>New Client</value></data>
+  <data name="Title_SaleDetails" xml:space="preserve"><value>Sale Details</value></data>
+  <data name="Title_AddSale" xml:space="preserve"><value>Add Sale</value></data>
+  <data name="Title_Settings" xml:space="preserve"><value>Settings</value></data>
+  <data name="Title_ContactEdit" xml:space="preserve"><value>Edit Contact</value></data>
+  <data name="Title_ContactDetails" xml:space="preserve"><value>Contact Details</value></data>
+  <data name="Title_BusinessDetails" xml:space="preserve"><value>Address Details</value></data>
+
+  <data name="Action_Search" xml:space="preserve"><value>Search</value></data>
+  <data name="Action_Add" xml:space="preserve"><value>Add</value></data>
+  <data name="Action_Update" xml:space="preserve"><value>Update</value></data>
+  <data name="Action_Delete" xml:space="preserve"><value>Delete</value></data>
+  <data name="Action_Clear" xml:space="preserve"><value>Clear</value></data>
+  <data name="Action_Save" xml:space="preserve"><value>Save</value></data>
+  <data name="Action_SaveSale" xml:space="preserve"><value>Save Sale</value></data>
+  <data name="Action_SavePayments" xml:space="preserve"><value>Save Payments</value></data>
+  <data name="Action_View" xml:space="preserve"><value>View</value></data>
+  <data name="Action_Edit" xml:space="preserve"><value>Edit</value></data>
+  <data name="Action_Details" xml:space="preserve"><value>Details</value></data>
+  <data name="Action_AddSale" xml:space="preserve"><value>Add Sale</value></data>
+  <data name="Action_AddClient" xml:space="preserve"><value>Add Client</value></data>
+  <data name="Action_Refresh" xml:space="preserve"><value>Refresh</value></data>
+  <data name="Action_Apply" xml:space="preserve"><value>Apply</value></data>
+  <data name="Action_Prev" xml:space="preserve"><value>Prev</value></data>
+  <data name="Action_Next" xml:space="preserve"><value>Next</value></data>
+
+  <data name="Dashboard_Subtitle" xml:space="preserve"><value>At-a-glance view of your pipeline.</value></data>
+  <data name="Dashboard_TotalClients" xml:space="preserve"><value>Total Clients</value></data>
+  <data name="Dashboard_TotalSales" xml:space="preserve"><value>Total Sales</value></data>
+  <data name="Dashboard_MonthCommission" xml:space="preserve"><value>This Month's Commission</value></data>
+  <data name="Dashboard_TotalRevenue" xml:space="preserve"><value>Total Revenue</value></data>
+  <data name="Dashboard_OutstandingCommission" xml:space="preserve"><value>Outstanding Commission</value></data>
+  <data name="Dashboard_UpcomingCommission" xml:space="preserve"><value>Upcoming Commission (30 days)</value></data>
+  <data name="Dashboard_UpcomingPayments" xml:space="preserve"><value>upcoming payments</value></data>
+  <data name="Dashboard_Trends" xml:space="preserve"><value>Sales and Commission Trend</value></data>
+  <data name="Dashboard_Sales" xml:space="preserve"><value>Sales</value></data>
+  <data name="Dashboard_Commission" xml:space="preserve"><value>Commission</value></data>
+
+  <data name="Clients_Subtitle" xml:space="preserve"><value>Search and open a client record.</value></data>
+  <data name="Clients_SearchPlaceholder" xml:space="preserve"><value>Search by client name</value></data>
+  <data name="Clients_Filters" xml:space="preserve"><value>Filters</value></data>
+  <data name="Clients_Filter_Country" xml:space="preserve"><value>Country</value></data>
+  <data name="Clients_Filter_AllCountries" xml:space="preserve"><value>All countries</value></data>
+  <data name="Clients_Filter_HasSales" xml:space="preserve"><value>Has sales</value></data>
+  <data name="Clients_Filter_Upcoming" xml:space="preserve"><value>Upcoming payments</value></data>
+  <data name="Clients_Sort_By" xml:space="preserve"><value>Sort by</value></data>
+  <data name="Clients_Sort_Name" xml:space="preserve"><value>Name</value></data>
+  <data name="Clients_Sort_Sales" xml:space="preserve"><value>Sales total</value></data>
+  <data name="Clients_Sort_Upcoming" xml:space="preserve"><value>Upcoming commission</value></data>
+  <data name="Clients_Summary_TotalClients" xml:space="preserve"><value>Total clients</value></data>
+  <data name="Clients_Summary_ActiveClients" xml:space="preserve"><value>Active clients</value></data>
+  <data name="Clients_Summary_TotalSales" xml:space="preserve"><value>Total sales</value></data>
+  <data name="Clients_Summary_Upcoming" xml:space="preserve"><value>Upcoming commission</value></data>
+  <data name="Clients_List_Client" xml:space="preserve"><value>Client</value></data>
+  <data name="Clients_List_Overview" xml:space="preserve"><value>Overview</value></data>
+  <data name="Clients_List_Actions" xml:space="preserve"><value>Actions</value></data>
+  <data name="Clients_NewClient" xml:space="preserve"><value>New Client</value></data>
+  <data name="Clients_NewClientSubtitle" xml:space="preserve"><value>Create a new client record.</value></data>
+  <data name="Clients_NewClientPlaceholder" xml:space="preserve"><value>Client name</value></data>
+  <data name="Clients_Orders" xml:space="preserve"><value>Orders</value></data>
+  <data name="Clients_Total" xml:space="preserve"><value>Total</value></data>
+  <data name="Clients_Upcoming" xml:space="preserve"><value>Upcoming</value></data>
+
+  <data name="Contacts_Subtitle" xml:space="preserve"><value>Manage contacts across all clients.</value></data>
+  <data name="Contacts_SearchPlaceholder" xml:space="preserve"><value>Search contacts</value></data>
+  <data name="Contacts_Filter_Client" xml:space="preserve"><value>Filter by client</value></data>
+  <data name="Contacts_Filter_Notes" xml:space="preserve"><value>Notes only</value></data>
+  <data name="Contacts_Filter_AllClients" xml:space="preserve"><value>All clients</value></data>
+  <data name="Contacts_Column_Contact" xml:space="preserve"><value>Contact</value></data>
+  <data name="Contacts_Column_Client" xml:space="preserve"><value>Client</value></data>
+  <data name="Contacts_Column_Email" xml:space="preserve"><value>Email</value></data>
+
+  <data name="Client_Profile" xml:space="preserve"><value>Client Profile</value></data>
+  <data name="Client_BusinessInfo" xml:space="preserve"><value>Address</value></data>
+  <data name="Client_Contacts" xml:space="preserve"><value>Contacts</value></data>
+  <data name="Client_Sales" xml:space="preserve"><value>Sales</value></data>
+  <data name="Client_PaymentsProgress" xml:space="preserve"><value>Payments</value></data>
+  <data name="Client_OutstandingCommission" xml:space="preserve"><value>Outstanding Commission</value></data>
+  <data name="Client_BusinessName" xml:space="preserve"><value>Business name</value></data>
+  <data name="Client_Address" xml:space="preserve"><value>Address</value></data>
+  <data name="Client_TaxId" xml:space="preserve"><value>Tax ID</value></data>
+  <data name="Client_AddressLine1" xml:space="preserve"><value>Address line 1</value></data>
+  <data name="Client_AddressLine2" xml:space="preserve"><value>Address line 2</value></data>
+  <data name="Client_City" xml:space="preserve"><value>City</value></data>
+  <data name="Client_StateProvince" xml:space="preserve"><value>State/Province</value></data>
+  <data name="Client_PostalCode" xml:space="preserve"><value>Postal code</value></data>
+  <data name="Client_Country" xml:space="preserve"><value>Country</value></data>
+  <data name="Contact_Name" xml:space="preserve"><value>Contact name</value></data>
+  <data name="Contact_Email" xml:space="preserve"><value>Email</value></data>
+  <data name="Contact_Phone" xml:space="preserve"><value>Phone</value></data>
+  <data name="Contact_Notes" xml:space="preserve"><value>Notes</value></data>
+
+  <data name="Sales_Header" xml:space="preserve"><value>Sales Registry</value></data>
+  <data name="Sales_Subtitle" xml:space="preserve"><value>Search by client, contact, or invoice number.</value></data>
+  <data name="Sales_SearchPlaceholder" xml:space="preserve"><value>Search sales</value></data>
+  <data name="Sales_Column_Client" xml:space="preserve"><value>Client</value></data>
+  <data name="Sales_Column_ContactInvoice" xml:space="preserve"><value>Contact / Invoice</value></data>
+  <data name="Sales_Column_Amount" xml:space="preserve"><value>Amount</value></data>
+  <data name="Sales_Column_Actions" xml:space="preserve"><value>Actions</value></data>
+
+  <data name="Sale_Details" xml:space="preserve"><value>Sale Details</value></data>
+  <data name="Sale_Editor" xml:space="preserve"><value>Sale Editor</value></data>
+  <data name="Sale_InvoicePlaceholder" xml:space="preserve"><value>Invoice number</value></data>
+  <data name="Sale_AmountPlaceholder" xml:space="preserve"><value>Sale amount</value></data>
+  <data name="Sale_CommissionPlaceholder" xml:space="preserve"><value>Commission %</value></data>
+  <data name="Sale_Contact" xml:space="preserve"><value>Contact</value></data>
+  <data name="Sale_Payments" xml:space="preserve"><value>Payments</value></data>
+  <data name="Payment_Number" xml:space="preserve"><value>#</value></data>
+  <data name="Payment_Date" xml:space="preserve"><value>Payment Date</value></data>
+  <data name="Payment_Amount" xml:space="preserve"><value>Amount</value></data>
+  <data name="Payment_PayDate" xml:space="preserve"><value>Pay Date</value></data>
+  <data name="Payment_Paid" xml:space="preserve"><value>Paid</value></data>
+
+  <data name="PayCalendar_Header" xml:space="preserve"><value>Commission Calendar</value></data>
+  <data name="PayCalendar_Subtitle" xml:space="preserve"><value>Your commission pay dates based on the 25/30/35 day payment schedule.</value></data>
+  <data name="PayCalendar_Calendar" xml:space="preserve"><value>Calendar</value></data>
+  <data name="PayCalendar_Summary" xml:space="preserve"><value>Pay date summary</value></data>
+  <data name="PayCalendar_SelectMonth" xml:space="preserve"><value>Select month</value></data>
+  <data name="PayCalendar_MonthTotal" xml:space="preserve"><value>Month total</value></data>
+  <data name="PayCalendar_Paid" xml:space="preserve"><value>Paid</value></data>
+  <data name="PayCalendar_Unpaid" xml:space="preserve"><value>Unpaid</value></data>
+  <data name="PayCalendar_Total" xml:space="preserve"><value>Total</value></data>
+  <data name="PayCalendar_PaySchedule" xml:space="preserve"><value>Pay Schedule</value></data>
+  <data name="PayCalendar_SelectedDate" xml:space="preserve"><value>Selected Pay Date</value></data>
+  <data name="PayCalendar_SelectDatePrompt" xml:space="preserve"><value>Select a date to see payments.</value></data>
+  <data name="PayCalendar_SelectedDatePayments" xml:space="preserve"><value>{0} payments</value></data>
+  <data name="PayCalendar_ClientInvoice" xml:space="preserve"><value>Client / Invoice</value></data>
+  <data name="PayCalendar_Contact" xml:space="preserve"><value>Contact</value></data>
+  <data name="PayCalendar_Payment" xml:space="preserve"><value>Payment</value></data>
+  <data name="PayCalendar_PaymentLabel" xml:space="preserve"><value>Payment</value></data>
+  <data name="PayCalendar_DueLabel" xml:space="preserve"><value>Due</value></data>
+  <data name="PayCalendar_Commission" xml:space="preserve"><value>Commission</value></data>
+  <data name="PayCalendar_PaidFlag" xml:space="preserve"><value>Paid</value></data>
+  <data name="PayCalendar_PayDate" xml:space="preserve"><value>Pay Date</value></data>
+
+  <data name="Day_Sun" xml:space="preserve"><value>Sun</value></data>
+  <data name="Day_Mon" xml:space="preserve"><value>Mon</value></data>
+  <data name="Day_Tue" xml:space="preserve"><value>Tue</value></data>
+  <data name="Day_Wed" xml:space="preserve"><value>Wed</value></data>
+  <data name="Day_Thu" xml:space="preserve"><value>Thu</value></data>
+  <data name="Day_Fri" xml:space="preserve"><value>Fri</value></data>
+  <data name="Day_Sat" xml:space="preserve"><value>Sat</value></data>
+
+  <data name="Settings_Language" xml:space="preserve"><value>Language</value></data>
+  <data name="Settings_Data" xml:space="preserve"><value>Data</value></data>
+  <data name="Settings_DbPath" xml:space="preserve"><value>Database path</value></data>
+  <data name="Settings_ActiveClients" xml:space="preserve"><value>Active clients</value></data>
+  <data name="Settings_English" xml:space="preserve"><value>English</value></data>
+  <data name="Settings_Portuguese" xml:space="preserve"><value>Portuguese (Brazil)</value></data>
+  <data name="Settings_Updates" xml:space="preserve"><value>Updates</value></data>
+  <data name="Settings_SaveUpdates" xml:space="preserve"><value>Save</value></data>
+  <data name="Settings_CheckUpdates" xml:space="preserve"><value>Check</value></data>
+  <data name="Settings_UpdateOwner" xml:space="preserve"><value>GitHub owner</value></data>
+  <data name="Settings_UpdateRepo" xml:space="preserve"><value>GitHub repo</value></data>
+  <data name="Settings_UpdateWindowsPattern" xml:space="preserve"><value>Windows assets (msix;exe)</value></data>
+  <data name="Settings_UpdateMacPattern" xml:space="preserve"><value>Mac assets (dmg;pkg)</value></data>
+  <data name="Settings_UpdateAndroidPattern" xml:space="preserve"><value>Android assets (apk)</value></data>
+  <data name="Settings_UpdatePreRelease" xml:space="preserve"><value>Include pre-releases</value></data>
+  <data name="Settings_UpdateRequired" xml:space="preserve"><value>Require updates</value></data>
+  <data name="Update_Title" xml:space="preserve"><value>Update</value></data>
+  <data name="Update_NotConfigured" xml:space="preserve"><value>Update source is not configured yet.</value></data>
+  <data name="Update_NotFound" xml:space="preserve"><value>No releases found.</value></data>
+  <data name="Update_NoUpdate" xml:space="preserve"><value>You already have the latest version.</value></data>
+  <data name="Update_NoAsset" xml:space="preserve"><value>No compatible installer was found for this platform.</value></data>
+  <data name="Update_Available" xml:space="preserve"><value>Version {0} is available. Download and install now?</value></data>
+  <data name="Update_Notes" xml:space="preserve"><value>Release notes</value></data>
+  <data name="Update_Downloading" xml:space="preserve"><value>Downloading update...</value></data>
+  <data name="Update_Preparing" xml:space="preserve"><value>Preparing installer...</value></data>
+  <data name="Update_Progress" xml:space="preserve"><value>{0}%</value></data>
+  <data name="Update_Ok" xml:space="preserve"><value>OK</value></data>
+  <data name="Update_Download" xml:space="preserve"><value>Download</value></data>
+  <data name="Update_Later" xml:space="preserve"><value>Later</value></data>
+  <data name="Update_ViewNotes" xml:space="preserve"><value>View notes</value></data>
+</root>

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage
+    x:Class="ClientTracker.Pages.BusinessDetailsPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:services="clr-namespace:ClientTracker.Services"
+    Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Title_BusinessDetails]}">
+
+        <ContentPage.Background>
+        <AppThemeBinding Light="{StaticResource AppBackgroundBrush}" Dark="{StaticResource AppBackgroundDarkBrush}" />
+    </ContentPage.Background>
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="16">
+            <Frame Style="{StaticResource CardFrame}">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Title_BusinessDetails]}" Style="{StaticResource SectionTitle}" />
+                        <Label Text="{Binding ClientName}" Style="{StaticResource MutedLabel}" />
+                    </VerticalStackLayout>
+                    <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Save]}" Command="{Binding SaveCommand}" Grid.Column="1" Style="{StaticResource InlineButton}" />
+                </Grid>
+            </Frame>
+
+            <Frame Style="{StaticResource CardFrame}">
+                <VerticalStackLayout Spacing="10">
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                        <Entry Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Clients_NewClientPlaceholder]}" Text="{Binding ClientName}" />
+                        <Entry Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Client_TaxId]}" Text="{Binding TaxId}" Grid.Column="1" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                        <Entry Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Client_AddressLine1]}" Text="{Binding AddressLine1}" />
+                        <Entry Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Client_AddressLine2]}" Text="{Binding AddressLine2}" Grid.Column="1" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                        <Entry Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Client_City]}" Text="{Binding City}" />
+                        <Entry Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Client_StateProvince]}" Text="{Binding StateProvince}" Grid.Column="1" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                        <Entry Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Client_PostalCode]}" Text="{Binding PostalCode}" />
+                        <Entry Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Client_Country]}" Text="{Binding Country}" Grid.Column="1" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Frame>
+
+            <Label Text="{Binding StatusMessage}" TextColor="{StaticResource Tertiary}" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
+
+

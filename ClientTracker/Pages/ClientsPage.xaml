@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage
+    x:Class="ClientTracker.Pages.ClientsPage"
+    x:Name="ClientsPageRoot"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:services="clr-namespace:ClientTracker.Services"
+    Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Title_Clients]}">
+
+        <ContentPage.Background>
+        <AppThemeBinding Light="{StaticResource AppBackgroundBrush}" Dark="{StaticResource AppBackgroundDarkBrush}" />
+    </ContentPage.Background>
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="16">
+            <Frame Style="{StaticResource CardFrame}">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Title_Clients]}" Style="{StaticResource SectionTitle}" />
+                        <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Clients_Subtitle]}" Style="{StaticResource MutedLabel}" />
+                    </VerticalStackLayout>
+                    <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_AddClient]}" Command="{Binding AddClientCommand}" Grid.Column="1" Style="{StaticResource InlineButton}" />
+                </Grid>
+            </Frame>
+
+            <Frame Style="{StaticResource CardFrame}">
+                <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="16" RowSpacing="16">
+                    <Frame Style="{StaticResource CardFrame}">
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Clients_Summary_TotalClients]}" Style="{StaticResource MutedLabel}" />
+                            <Label Text="{Binding TotalClients}" FontSize="24" FontAttributes="Bold" />
+                        </VerticalStackLayout>
+                    </Frame>
+                    <Frame Style="{StaticResource CardFrame}" Grid.Column="1">
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Clients_Summary_ActiveClients]}" Style="{StaticResource MutedLabel}" />
+                            <Label Text="{Binding ActiveClients}" FontSize="24" FontAttributes="Bold" />
+                        </VerticalStackLayout>
+                    </Frame>
+                    <Frame Style="{StaticResource CardFrame}" Grid.Row="1">
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Clients_Summary_TotalSales]}" Style="{StaticResource MutedLabel}" />
+                            <Label Text="{Binding TotalSalesAmount, StringFormat='{0:C}'}" FontSize="24" FontAttributes="Bold" />
+                        </VerticalStackLayout>
+                    </Frame>
+                    <Frame Style="{StaticResource CardFrame}" Grid.Row="1" Grid.Column="1">
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Clients_Summary_Upcoming]}" Style="{StaticResource MutedLabel}" />
+                            <Label Text="{Binding UpcomingCommissionAmount, StringFormat='{0:C}'}" FontSize="24" FontAttributes="Bold" />
+                        </VerticalStackLayout>
+                    </Frame>
+                </Grid>
+            </Frame>
+
+            <Frame Style="{StaticResource CardFrame}">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Clients_Filters]}" Style="{StaticResource SectionTitle}" />
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                        <Entry Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Clients_SearchPlaceholder]}" Text="{Binding ClientSearch}" />
+                        <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Search]}" Command="{Binding SearchCommand}" Style="{StaticResource InlineButton}" />
+                    </Grid>
+                    <Grid ColumnDefinitions="2*,2*" ColumnSpacing="10">
+                        <Picker
+                            Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Clients_Filter_Country]}"
+                            ItemsSource="{Binding CountryFilters}"
+                            SelectedItem="{Binding SelectedCountryFilter}">
+                            <Picker.ItemDisplayBinding>
+                                <Binding Path="DisplayName" />
+                            </Picker.ItemDisplayBinding>
+                        </Picker>
+                        <Picker
+                            Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Clients_Sort_By]}"
+                            ItemsSource="{Binding SortOptions}"
+                            SelectedItem="{Binding SelectedSortOption}"
+                            Grid.Column="1">
+                            <Picker.ItemDisplayBinding>
+                                <Binding Path="DisplayName" />
+                            </Picker.ItemDisplayBinding>
+                        </Picker>
+                    </Grid>
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                        <VerticalStackLayout Spacing="6">
+                            <HorizontalStackLayout Spacing="8">
+                                <CheckBox IsChecked="{Binding HasSalesOnly}" />
+                                <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Clients_Filter_HasSales]}" VerticalTextAlignment="Center" />
+                            </HorizontalStackLayout>
+                            <HorizontalStackLayout Spacing="8">
+                                <CheckBox IsChecked="{Binding HasUpcomingOnly}" />
+                                <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Clients_Filter_Upcoming]}" VerticalTextAlignment="Center" />
+                            </HorizontalStackLayout>
+                        </VerticalStackLayout>
+                        <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Apply]}" Command="{Binding ApplyFiltersCommand}" Grid.Column="1" VerticalOptions="Center" Style="{StaticResource InlineButton}" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame Style="{StaticResource CardFrame}">
+                <VerticalStackLayout Spacing="10">
+                    <CollectionView ItemsSource="{Binding Clients}" SelectionMode="None">
+                        <CollectionView.ItemsLayout>
+                            <LinearItemsLayout Orientation="Vertical" ItemSpacing="10" />
+                        </CollectionView.ItemsLayout>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <Border Stroke="{StaticResource BorderSubtle}" StrokeThickness="1" BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource Gray950}}">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="14" />
+                                    </Border.StrokeShape>
+                                    <VerticalStackLayout Padding="12" Spacing="10">
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                            <VerticalStackLayout Spacing="2">
+                                                <Label Text="{Binding Name}" FontAttributes="Bold" />
+                                                <Label Text="{Binding LocationLine}" Style="{StaticResource MutedLabel}" />
+                                            </VerticalStackLayout>
+                                            <Label Text="{Binding TotalSalesAmount, StringFormat='{0:C}'}" FontAttributes="Bold" Grid.Column="1" HorizontalTextAlignment="End" />
+                                        </Grid>
+                                        <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                                            <VerticalStackLayout Spacing="2">
+                                                <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Clients_Orders]}" Style="{StaticResource MutedLabel}" />
+                                                <Label Text="{Binding TotalSalesCount}" FontAttributes="Bold" />
+                                            </VerticalStackLayout>
+                                            <VerticalStackLayout Grid.Column="1" Spacing="2">
+                                                <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Clients_Total]}" Style="{StaticResource MutedLabel}" />
+                                                <Label Text="{Binding TotalSalesAmount, StringFormat='{0:C}'}" FontAttributes="Bold" />
+                                            </VerticalStackLayout>
+                                            <VerticalStackLayout Grid.Column="2" Spacing="2">
+                                                <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Clients_Upcoming]}" Style="{StaticResource MutedLabel}" />
+                                                <Label Text="{Binding UpcomingCommissionAmount, StringFormat='{0:C}'}" FontAttributes="Bold" />
+                                            </VerticalStackLayout>
+                                        </Grid>
+                                        <HorizontalStackLayout Spacing="8">
+                                            <Button
+                                                Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_View]}"
+                                                Command="{Binding BindingContext.ViewClientCommand, Source={x:Reference ClientsPageRoot}}"
+                                                CommandParameter="{Binding .}"
+                                                Style="{StaticResource InlineButton}" />
+                                            <Button
+                                                Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Edit]}"
+                                                Command="{Binding BindingContext.EditClientCommand, Source={x:Reference ClientsPageRoot}}"
+                                                CommandParameter="{Binding .}"
+                                                Style="{StaticResource InlineButton}" />
+                                            <Button
+                                                Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Delete]}"
+                                                Command="{Binding BindingContext.DeleteClientItemCommand, Source={x:Reference ClientsPageRoot}}"
+                                                CommandParameter="{Binding .}"
+                                                Style="{StaticResource InlineDangerButton}" />
+                                        </HorizontalStackLayout>
+                                    </VerticalStackLayout>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame Style="{StaticResource CardFrame}">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Clients_NewClient]}" Style="{StaticResource SectionTitle}" />
+                    <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Clients_NewClientSubtitle]}" Style="{StaticResource MutedLabel}" />
+                    <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_AddClient]}" Command="{Binding AddClientCommand}" Style="{StaticResource InlineButton}" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame Style="{StaticResource CardFrame}">
+                <VerticalStackLayout Spacing="12">
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                        <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Prev]}" Command="{Binding PreviousPageCommand}" Style="{StaticResource InlineButton}" />
+                        <Label Text="{Binding PageLabel}" HorizontalTextAlignment="Center" Grid.Column="1" />
+                        <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Next]}" Command="{Binding NextPageCommand}" Grid.Column="2" Style="{StaticResource InlineButton}" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Frame>
+
+            <Label Text="{Binding StatusMessage}" TextColor="{StaticResource Tertiary}" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
+
+

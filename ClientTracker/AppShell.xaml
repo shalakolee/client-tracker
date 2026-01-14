@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell
+    x:Class="ClientTracker.AppShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:views="clr-namespace:ClientTracker.Pages"
+    xmlns:services="clr-namespace:ClientTracker.Services"
+    Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[App_Title]}"
+    FlyoutBehavior="Flyout">
+
+    <Shell.FlyoutHeader>
+        <Grid Padding="24,32,24,20" BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource OffBlack}}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[App_Title]}" Style="{StaticResource FlyoutTitle}" />
+            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[App_Subtitle]}" Style="{StaticResource FlyoutSubtitle}" Grid.Row="1" />
+        </Grid>
+    </Shell.FlyoutHeader>
+
+    <FlyoutItem Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Nav_Dashboard]}" Route="Dashboard">
+        <ShellContent ContentTemplate="{DataTemplate views:DashboardPage}" Route="DashboardPage" />
+    </FlyoutItem>
+    <FlyoutItem Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Nav_Clients]}" Route="Clients">
+        <ShellContent ContentTemplate="{DataTemplate views:ClientsPage}" Route="ClientsPage" />
+    </FlyoutItem>
+    <FlyoutItem Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Nav_Sales]}" Route="Sales">
+        <ShellContent ContentTemplate="{DataTemplate views:SalesPage}" Route="SalesPage" />
+    </FlyoutItem>
+    <FlyoutItem Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Nav_PayCalendar]}" Route="PayCalendar">
+        <ShellContent ContentTemplate="{DataTemplate views:PayCalendarPage}" Route="PayCalendarPage" />
+    </FlyoutItem>
+    <FlyoutItem Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Nav_Settings]}" Route="Settings">
+        <ShellContent ContentTemplate="{DataTemplate views:SettingsPage}" Route="SettingsPage" />
+    </FlyoutItem>
+
+</Shell>

@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage
+    x:Class="ClientTracker.Pages.SettingsPage"
+    x:Name="SettingsPageRoot"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:services="clr-namespace:ClientTracker.Services"
+    Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Title_Settings]}">
+
+        <ContentPage.Background>
+        <AppThemeBinding Light="{StaticResource AppBackgroundBrush}" Dark="{StaticResource AppBackgroundDarkBrush}" />
+    </ContentPage.Background>
+
+    <ScrollView>
+        <VerticalStackLayout Padding="24" Spacing="18">
+            <Frame Style="{StaticResource CardFrame}">
+                <VerticalStackLayout Spacing="10">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                        <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_Language]}" Style="{StaticResource SectionTitle}" />
+                        <Button
+                            Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Save]}"
+                            Command="{Binding ApplyLanguageCommand}"
+                            Style="{StaticResource InlineButton}"
+                            Grid.Column="1" />
+                    </Grid>
+                    <Picker
+                        Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_Language]}"
+                        ItemsSource="{Binding Languages}"
+                        SelectedItem="{Binding SelectedLanguage}">
+                        <Picker.ItemDisplayBinding>
+                            <Binding Path="DisplayKey">
+                                <Binding.Converter>
+                                    <services:LocalizationKeyConverter />
+                                </Binding.Converter>
+                            </Binding>
+                        </Picker.ItemDisplayBinding>
+                    </Picker>
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame Style="{StaticResource CardFrame}">
+                <VerticalStackLayout Spacing="10">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                        <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_Data]}" Style="{StaticResource SectionTitle}" />
+                        <Button
+                            Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Refresh]}"
+                            Command="{Binding RefreshDiagnosticsCommand}"
+                            Style="{StaticResource InlineButton}"
+                            Grid.Column="1" />
+                    </Grid>
+                    <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_DbPath]}" Style="{StaticResource MutedLabel}" />
+                    <Label Text="{Binding DatabasePath}" />
+                    <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_ActiveClients]}" Style="{StaticResource MutedLabel}" />
+                    <Label Text="{Binding ActiveClientCount}" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame Style="{StaticResource CardFrame}">
+                <VerticalStackLayout Spacing="10">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                        <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_Updates]}" Style="{StaticResource SectionTitle}" />
+                        <HorizontalStackLayout Grid.Column="1" Spacing="8">
+                            <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_SaveUpdates]}" Command="{Binding SaveUpdateSettingsCommand}" Style="{StaticResource InlineButton}" />
+                            <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_CheckUpdates]}" Command="{Binding CheckUpdatesCommand}" Style="{StaticResource InlineButton}" />
+                        </HorizontalStackLayout>
+                    </Grid>
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                        <Entry Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_UpdateOwner]}" Text="{Binding GitHubOwner}" />
+                        <Entry Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_UpdateRepo]}" Text="{Binding GitHubRepo}" Grid.Column="1" />
+                    </Grid>
+                    <Entry Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_UpdateWindowsPattern]}" Text="{Binding WindowsAssetPattern}" />
+                    <Entry Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_UpdateMacPattern]}" Text="{Binding MacAssetPattern}" />
+                    <Entry Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_UpdateAndroidPattern]}" Text="{Binding AndroidAssetPattern}" />
+                    <HorizontalStackLayout Spacing="8">
+                        <CheckBox IsChecked="{Binding IncludePreReleases}" />
+                        <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_UpdatePreRelease]}" VerticalTextAlignment="Center" />
+                    </HorizontalStackLayout>
+                    <HorizontalStackLayout Spacing="8">
+                        <CheckBox IsChecked="{Binding RequireUpdates}" />
+                        <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_UpdateRequired]}" VerticalTextAlignment="Center" />
+                    </HorizontalStackLayout>
+                </VerticalStackLayout>
+            </Frame>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
+
+

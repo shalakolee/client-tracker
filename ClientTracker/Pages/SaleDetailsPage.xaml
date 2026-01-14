@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage
+    x:Class="ClientTracker.Pages.SaleDetailsPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:services="clr-namespace:ClientTracker.Services"
+    Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Title_SaleDetails]}">
+
+        <ContentPage.Background>
+        <AppThemeBinding Light="{StaticResource AppBackgroundBrush}" Dark="{StaticResource AppBackgroundDarkBrush}" />
+    </ContentPage.Background>
+
+    <ScrollView>
+        <VerticalStackLayout Padding="24" Spacing="18">
+            <Frame Style="{StaticResource CardFrame}">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Sale_Details]}" Style="{StaticResource SectionTitle}" />
+                        <Label Text="{Binding ClientName}" FontAttributes="Bold" FontSize="18" />
+                    </VerticalStackLayout>
+                    <HorizontalStackLayout Grid.Column="1" Spacing="8" VerticalOptions="Start">
+                        <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_SaveSale]}" Command="{Binding SaveSaleCommand}" Style="{StaticResource InlineButton}" />
+                        <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Delete]}" Command="{Binding DeleteSaleCommand}" Style="{StaticResource InlineDangerButton}" />
+                    </HorizontalStackLayout>
+                </Grid>
+            </Frame>
+
+            <Frame Style="{StaticResource CardFrame}">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Sale_Editor]}" Style="{StaticResource SectionTitle}" />
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                        <Entry Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Sale_InvoicePlaceholder]}" Text="{Binding InvoiceNumber}" />
+                        <Picker Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Sale_Contact]}" ItemsSource="{Binding Contacts}" ItemDisplayBinding="{Binding Name}" SelectedItem="{Binding SelectedContact}" Grid.Column="1" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="12">
+                        <DatePicker Date="{Binding SaleDate}" />
+                        <Entry Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Sale_AmountPlaceholder]}" Keyboard="Numeric" Text="{Binding Amount}" Grid.Column="1" />
+                        <Entry Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Sale_CommissionPlaceholder]}" Keyboard="Numeric" Text="{Binding CommissionPercent}" Grid.Column="2" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame Style="{StaticResource CardFrame}">
+                <VerticalStackLayout Spacing="10">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                        <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Sale_Payments]}" Style="{StaticResource SectionTitle}" />
+                        <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_SavePayments]}" Command="{Binding SavePaymentsCommand}" Grid.Column="1" Style="{StaticResource InlineButton}" />
+                    </Grid>
+
+                    <CollectionView ItemsSource="{Binding Payments}" SelectionMode="None">
+                        <CollectionView.ItemsLayout>
+                            <LinearItemsLayout Orientation="Vertical" ItemSpacing="8" />
+                        </CollectionView.ItemsLayout>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <Border Stroke="{StaticResource BorderSubtle}" StrokeThickness="1" BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource Gray950}}">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="12" />
+                                    </Border.StrokeShape>
+                                    <Grid Padding="10" ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                        <VerticalStackLayout Spacing="4">
+                                            <Label Text="{Binding PaymentNumber, StringFormat='Payment #{0}'}" FontAttributes="Bold" />
+                                            <DatePicker Date="{Binding PaymentDate}" />
+                                            <Entry Text="{Binding Amount, StringFormat='{0:C}'}" Keyboard="Numeric" />
+                                        </VerticalStackLayout>
+                                        <VerticalStackLayout Grid.Column="1" Spacing="6" HorizontalOptions="End">
+                                            <Label Text="{Binding PayDate, StringFormat='{0:MMM dd}'}" Style="{StaticResource MutedLabel}" HorizontalTextAlignment="End" />
+                                            <HorizontalStackLayout Spacing="6" HorizontalOptions="End">
+                                                <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Payment_Paid]}" Style="{StaticResource MutedLabel}" />
+                                                <CheckBox IsChecked="{Binding IsPaid}" VerticalOptions="Center" />
+                                            </HorizontalStackLayout>
+                                        </VerticalStackLayout>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+            </Frame>
+
+            <Label Text="{Binding StatusMessage}" TextColor="{StaticResource Tertiary}" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
+
+

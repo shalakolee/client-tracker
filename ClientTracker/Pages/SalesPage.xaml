@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage
+    x:Class="ClientTracker.Pages.SalesPage"
+    x:Name="SalesPageRoot"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:services="clr-namespace:ClientTracker.Services"
+    Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Title_Sales]}">
+
+        <ContentPage.Background>
+        <AppThemeBinding Light="{StaticResource AppBackgroundBrush}" Dark="{StaticResource AppBackgroundDarkBrush}" />
+    </ContentPage.Background>
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="16">
+            <Frame Style="{StaticResource CardFrame}">
+                <VerticalStackLayout Spacing="10">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Sales_Header]}" Style="{StaticResource SectionTitle}" />
+                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Sales_Subtitle]}" Style="{StaticResource MutedLabel}" />
+                        </VerticalStackLayout>
+                        <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_AddSale]}" Command="{Binding AddSaleCommand}" Grid.Column="1" Style="{StaticResource InlineButton}" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                        <Entry Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Sales_SearchPlaceholder]}" Text="{Binding SearchText}" />
+                        <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Search]}" Command="{Binding LoadCommand}" Style="{StaticResource InlineButton}" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame Style="{StaticResource CardFrame}">
+                <VerticalStackLayout Spacing="8">
+                    <CollectionView ItemsSource="{Binding Sales}" SelectionMode="None">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <Border Stroke="{StaticResource BorderSubtle}" StrokeThickness="1" BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource Gray950}}">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="14" />
+                                    </Border.StrokeShape>
+                                    <VerticalStackLayout Padding="12" Spacing="8">
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                            <VerticalStackLayout Spacing="2">
+                                                <Label Text="{Binding ClientName}" FontAttributes="Bold" />
+                                                <Label Text="{Binding ContactName}" Style="{StaticResource MutedLabel}" />
+                                            </VerticalStackLayout>
+                                            <Label Text="{Binding Amount, StringFormat='{0:C}'}" FontAttributes="Bold" Grid.Column="1" HorizontalTextAlignment="End" />
+                                        </Grid>
+                                        <Label Text="{Binding InvoiceNumber, StringFormat='Invoice #{0}'}" Style="{StaticResource MutedLabel}" />
+                                        <HorizontalStackLayout Spacing="8">
+                                            <Button
+                                                Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Details]}"
+                                                Command="{Binding BindingContext.ViewSaleCommand, Source={x:Reference SalesPageRoot}}"
+                                                CommandParameter="{Binding .}"
+                                                Style="{StaticResource InlineButton}" />
+                                            <Button
+                                                Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Edit]}"
+                                                Command="{Binding BindingContext.EditSaleCommand, Source={x:Reference SalesPageRoot}}"
+                                                CommandParameter="{Binding .}"
+                                                Style="{StaticResource InlineButton}" />
+                                            <Button
+                                                Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Delete]}"
+                                                Command="{Binding BindingContext.DeleteSaleCommand, Source={x:Reference SalesPageRoot}}"
+                                                CommandParameter="{Binding .}"
+                                                Style="{StaticResource InlineDangerButton}" />
+                                        </HorizontalStackLayout>
+                                    </VerticalStackLayout>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+            </Frame>
+
+            <Label Text="{Binding StatusMessage}" TextColor="{StaticResource Tertiary}" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
+
+
