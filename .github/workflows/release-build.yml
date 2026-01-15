@@ -112,6 +112,19 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
+      - name: Pin .NET 8 SDK for this job
+        shell: bash
+        run: |
+          # Repo global.json pins .NET 10; MacCatalyst build uses .NET 8 to match the runner Xcode version.
+          mv global.json global.json.dotnet10
+          cat > global.json <<'JSON'
+          {
+            "sdk": {
+              "version": "8.0.100",
+              "rollForward": "latestFeature"
+            }
+          }
+          JSON
       - name: Install MacCatalyst workload
         run: dotnet workload install maui-maccatalyst
       - name: Publish MacCatalyst
