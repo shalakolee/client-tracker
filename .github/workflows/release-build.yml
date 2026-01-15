@@ -133,9 +133,11 @@ jobs:
         shell: bash
         run: |
           mkdir -p artifacts
-          APP_PATH=$(find ClientTracker/bin/Release/net8.0-maccatalyst/maccatalyst-x64/publish -maxdepth 1 -name "*.app" | head -n 1)
+          APP_PATH=$(find ClientTracker/bin/Release/net8.0-maccatalyst -type d -name "*.app" | head -n 1)
           if [ -z "$APP_PATH" ]; then
             echo "No .app bundle found."
+            echo "Debug: listing publish outputs..."
+            find ClientTracker/bin/Release/net8.0-maccatalyst -maxdepth 5 -print
             exit 1
           fi
           DMG_DIR=$(mktemp -d)
