@@ -25,11 +25,33 @@ public static class MauiProgram
 			var accent = Color.FromArgb("#1D4ED8");
 			var selection = Color.FromArgb("#93C5FD");
 
-			EntryHandler.Mapper.AppendToMapping("BlueTheme", (handler, view) =>
+#if ANDROID
+			static Color GetThemeColor(Color light, Color dark)
+				=> Application.Current?.RequestedTheme == AppTheme.Dark ? dark : light;
+
+			static void ApplyAndroidInputBackground(Android.Views.View platformView, Color fill, Color stroke)
+			{
+				var context = platformView.Context;
+				var corner = (float)context.ToPixels(14);
+				var border = (int)context.ToPixels(1);
+
+				var drawable = new Android.Graphics.Drawables.GradientDrawable();
+				drawable.SetColor(fill.ToPlatform());
+				drawable.SetCornerRadius(corner);
+				drawable.SetStroke(border, stroke.ToPlatform());
+
+				platformView.BackgroundTintList = null;
+				platformView.Background = drawable;
+			}
+#endif
+
+			EntryHandler.Mapper.AppendToMapping("ModernInputs", (handler, view) =>
 			{
 #if ANDROID
 				handler.PlatformView.SetHighlightColor(selection.ToPlatform());
-				handler.PlatformView.BackgroundTintList = Android.Content.Res.ColorStateList.ValueOf(accent.ToPlatform());
+				var fill = view.BackgroundColor;
+				var stroke = GetThemeColor(Color.FromArgb("#E2E8F0"), Color.FromArgb("#475569"));
+				ApplyAndroidInputBackground(handler.PlatformView, fill, stroke);
 #elif IOS || MACCATALYST
 				handler.PlatformView.TintColor = accent.ToPlatform();
 #elif WINDOWS
@@ -39,11 +61,13 @@ public static class MauiProgram
 #endif
 			});
 
-			EditorHandler.Mapper.AppendToMapping("BlueTheme", (handler, view) =>
+			EditorHandler.Mapper.AppendToMapping("ModernInputs", (handler, view) =>
 			{
 #if ANDROID
 				handler.PlatformView.SetHighlightColor(selection.ToPlatform());
-				handler.PlatformView.BackgroundTintList = Android.Content.Res.ColorStateList.ValueOf(accent.ToPlatform());
+				var fill = view.BackgroundColor;
+				var stroke = GetThemeColor(Color.FromArgb("#E2E8F0"), Color.FromArgb("#475569"));
+				ApplyAndroidInputBackground(handler.PlatformView, fill, stroke);
 #elif IOS || MACCATALYST
 				handler.PlatformView.TintColor = accent.ToPlatform();
 #elif WINDOWS
@@ -53,10 +77,12 @@ public static class MauiProgram
 #endif
 			});
 
-			PickerHandler.Mapper.AppendToMapping("BlueTheme", (handler, view) =>
+			PickerHandler.Mapper.AppendToMapping("ModernInputs", (handler, view) =>
 			{
 #if ANDROID
-				handler.PlatformView.BackgroundTintList = Android.Content.Res.ColorStateList.ValueOf(accent.ToPlatform());
+				var fill = view.BackgroundColor;
+				var stroke = GetThemeColor(Color.FromArgb("#E2E8F0"), Color.FromArgb("#475569"));
+				ApplyAndroidInputBackground(handler.PlatformView, fill, stroke);
 #elif IOS || MACCATALYST
 				handler.PlatformView.TintColor = accent.ToPlatform();
 #endif
