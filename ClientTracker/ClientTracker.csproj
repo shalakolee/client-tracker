@@ -39,6 +39,11 @@
 		<TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
 	</PropertyGroup>
 
+	<!-- CI can override TFMs to avoid installing unnecessary workloads per job -->
+	<PropertyGroup Condition="'$(CI_TARGET_FRAMEWORKS)' != ''">
+		<TargetFrameworks>$(CI_TARGET_FRAMEWORKS)</TargetFrameworks>
+	</PropertyGroup>
+
 	<ItemGroup>
 		<!-- App Icon -->
 		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#1D4ED8" />

@@ -15,7 +15,9 @@ env:
 
 jobs:
   build-android:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
+    env:
+      CI_TARGET_FRAMEWORKS: net10.0-android
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,19 +30,20 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-      - name: Install MAUI workload
-        run: dotnet workload install maui --skip-manifest-update
-      - name: Restore workloads
-        run: dotnet workload restore
+      - name: Install Android workload
+        run: dotnet workload install maui-android
       - name: Publish Android
-        run: dotnet publish "${PROJECT_PATH}" -c "${CONFIGURATION}" -f net10.0-android -p:AndroidPackageFormat=apk
+        run: dotnet publish "${PROJECT_PATH}" -c "${CONFIGURATION}" -f net10.0-android -p:AndroidPackageFormat=apk -p:CI_TARGET_FRAMEWORKS=${{ env.CI_TARGET_FRAMEWORKS }}
       - name: Collect Android artifact
-        shell: pwsh
+        shell: bash
         run: |
           mkdir -p artifacts
-          $apk = Get-ChildItem -Recurse -Filter *.apk -Path ClientTracker/bin/Release/net10.0-android | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-          if (-not $apk) { throw "No APK found." }
-          Copy-Item $apk.FullName "artifacts/ClientTracker-android.apk" -Force
+          APK_PATH=$(find ClientTracker/bin/Release/net10.0-android -name "*.apk" | head -n 1)
+          if [ -z "$APK_PATH" ]; then
+            echo "No APK found."
+            exit 1
+          fi
+          cp "$APK_PATH" "artifacts/ClientTracker-android.apk"
       - name: Upload Android artifact
         uses: actions/upload-artifact@v4
         with:
@@ -49,6 +52,8 @@ jobs:
 
   build-windows:
     runs-on: windows-latest
+    env:
+      CI_TARGET_FRAMEWORKS: net10.0-windows10.0.19041.0
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -56,12 +61,10 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-      - name: Install MAUI workload
-        run: dotnet workload install maui --skip-manifest-update
-      - name: Restore workloads
-        run: dotnet workload restore
+      - name: Install Windows workload
+        run: dotnet workload install maui-windows
       - name: Publish Windows
-        run: dotnet publish "$env:PROJECT_PATH" -c "$env:CONFIGURATION" -f net10.0-windows10.0.19041.0 -r win-x64 -p:WindowsPackageType=MSIX -p:GenerateAppxPackageOnBuild=true -p:AppxPackageSigningEnabled=false
+        run: dotnet publish "$env:PROJECT_PATH" -c "$env:CONFIGURATION" -f net10.0-windows10.0.19041.0 -r win-x64 -p:WindowsPackageType=MSIX -p:GenerateAppxPackageOnBuild=true -p:AppxPackageSigningEnabled=false -p:CI_TARGET_FRAMEWORKS=$env:CI_TARGET_FRAMEWORKS
       - name: Collect Windows artifact
         shell: pwsh
         run: |
@@ -79,6 +82,8 @@ jobs:
 
   build-maccatalyst:
     runs-on: macos-latest
+    env:
+      CI_TARGET_FRAMEWORKS: net10.0-maccatalyst
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -86,12 +91,10 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-      - name: Install MAUI workload
-        run: dotnet workload install maui --skip-manifest-update
-      - name: Restore workloads
-        run: dotnet workload restore
+      - name: Install MacCatalyst workload
+        run: dotnet workload install maui-maccatalyst
       - name: Publish MacCatalyst
-        run: dotnet publish "${PROJECT_PATH}" -c "${CONFIGURATION}" -f net10.0-maccatalyst -r maccatalyst-x64
+        run: dotnet publish "${PROJECT_PATH}" -c "${CONFIGURATION}" -f net10.0-maccatalyst -r maccatalyst-x64 -p:CI_TARGET_FRAMEWORKS=${{ env.CI_TARGET_FRAMEWORKS }}
       - name: Collect MacCatalyst artifact
         shell: bash
         run: |
