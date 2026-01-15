@@ -22,7 +22,7 @@
                             <RoundRectangle CornerRadius="14" />
                         </Border.StrokeShape>
                         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                            <Image Source="icon_search" WidthRequest="18" HeightRequest="18" Opacity="0.7" VerticalOptions="Center" />
+                            <Image Source="{OnPlatform WinUI=icon_search_win.png, Default=icon_search}" WidthRequest="18" HeightRequest="18" Opacity="0.7" VerticalOptions="Center" />
                             <Entry Grid.Column="1" Placeholder="Search…" BackgroundColor="Transparent" />
                         </Grid>
                     </Border>
@@ -41,7 +41,7 @@
                         <Border.StrokeShape>
                             <RoundRectangle CornerRadius="14" />
                         </Border.StrokeShape>
-                        <ImageButton Source="icon_bell" BackgroundColor="Transparent" Padding="10" Command="{Binding RefreshCommand}" />
+                        <ImageButton Source="{OnPlatform WinUI=icon_bell_win.png, Default=icon_bell}" BackgroundColor="Transparent" Padding="10" Command="{Binding RefreshCommand}" />
                     </Border>
                 </Grid>
             </controls:TopBar.RightContent>

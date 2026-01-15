@@ -17,26 +17,26 @@
                 <Border.StrokeShape>
                     <RoundRectangle CornerRadius="12" />
                 </Border.StrokeShape>
-                <Image Source="logo_mark" WidthRequest="18" HeightRequest="18" HorizontalOptions="Center" VerticalOptions="Center" />
+                <Image Source="{OnPlatform WinUI=logo_mark_win.png, Default=logo_mark}" WidthRequest="18" HeightRequest="18" HorizontalOptions="Center" VerticalOptions="Center" />
             </Border>
             <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[App_Title]}" Style="{StaticResource FlyoutTitle}" Grid.Column="1" />
             <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[App_Subtitle]}" Style="{StaticResource FlyoutSubtitle}" Grid.Column="1" Grid.Row="1" />
         </Grid>
     </Shell.FlyoutHeader>
 
-    <FlyoutItem Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Nav_Dashboard]}" Route="Dashboard" Icon="nav_dashboard">
+    <FlyoutItem Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Nav_Dashboard]}" Route="Dashboard" Icon="{OnPlatform WinUI=nav_dashboard_win.png, Default=nav_dashboard}">
         <ShellContent ContentTemplate="{DataTemplate views:DashboardPage}" Route="DashboardPage" />
     </FlyoutItem>
-    <FlyoutItem Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Nav_Clients]}" Route="Clients" Icon="nav_clients">
+    <FlyoutItem Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Nav_Clients]}" Route="Clients" Icon="{OnPlatform WinUI=nav_clients_win.png, Default=nav_clients}">
         <ShellContent ContentTemplate="{DataTemplate views:ClientsPage}" Route="ClientsPage" />
     </FlyoutItem>
-    <FlyoutItem Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Nav_Sales]}" Route="Sales" Icon="nav_sales">
+    <FlyoutItem Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Nav_Sales]}" Route="Sales" Icon="{OnPlatform WinUI=nav_sales_win.png, Default=nav_sales}">
         <ShellContent ContentTemplate="{DataTemplate views:SalesPage}" Route="SalesPage" />
     </FlyoutItem>
-    <FlyoutItem Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Nav_PayCalendar]}" Route="PayCalendar" Icon="nav_calendar">
+    <FlyoutItem Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Nav_PayCalendar]}" Route="PayCalendar" Icon="{OnPlatform WinUI=nav_calendar_win.png, Default=nav_calendar}">
         <ShellContent ContentTemplate="{DataTemplate views:PayCalendarPage}" Route="PayCalendarPage" />
     </FlyoutItem>
-    <FlyoutItem Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Nav_Settings]}" Route="Settings" Icon="nav_settings">
+    <FlyoutItem Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Nav_Settings]}" Route="Settings" Icon="{OnPlatform WinUI=nav_settings_win.png, Default=nav_settings}">
         <ShellContent ContentTemplate="{DataTemplate views:SettingsPage}" Route="SettingsPage" />
     </FlyoutItem>
 
@@ -46,7 +46,7 @@
                 <Border.StrokeShape>
                     <RoundRectangle CornerRadius="999" />
                 </Border.StrokeShape>
-                <Image Source="avatar" WidthRequest="18" HeightRequest="18" HorizontalOptions="Center" VerticalOptions="Center" />
+                <Image Source="{OnPlatform WinUI=avatar_win.png, Default=avatar}" WidthRequest="18" HeightRequest="18" HorizontalOptions="Center" VerticalOptions="Center" />
             </Border>
             <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
                 <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[App_Title]}" FontAttributes="Bold" FontSize="13" />
