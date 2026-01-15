@@ -34,16 +34,16 @@ public partial class App : Application
 	protected override Window CreateWindow(IActivationState? activationState)
 	{
         StartupLog.Write("CreateWindow start");
-        AppShell shell;
+        Shell shell;
         try
         {
-            StartupLog.Write("CreateWindow: constructing AppShell");
-            shell = new AppShell();
-            StartupLog.Write("CreateWindow: AppShell constructed");
+            StartupLog.Write("CreateWindow: constructing Shell");
+            shell = ShellFactory.CreateShell();
+            StartupLog.Write("CreateWindow: Shell constructed");
         }
         catch (Exception ex)
         {
-            StartupLog.Write(ex, "CreateWindow: AppShell construction");
+            StartupLog.Write(ex, "CreateWindow: Shell construction");
             throw;
         }
 

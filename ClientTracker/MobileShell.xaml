@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell
+    x:Class="ClientTracker.MobileShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:views="clr-namespace:ClientTracker.Pages"
+    xmlns:services="clr-namespace:ClientTracker.Services"
+    Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[App_Title]}"
+    Shell.NavBarIsVisible="False"
+    FlyoutBehavior="Disabled">
+
+    <TabBar>
+        <ShellContent
+            Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Nav_Dashboard]}"
+            Icon="nav_dashboard.svg"
+            ContentTemplate="{DataTemplate views:DashboardPage}"
+            Route="DashboardPage" />
+        <ShellContent
+            Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Nav_Clients]}"
+            Icon="nav_clients.svg"
+            ContentTemplate="{DataTemplate views:ClientsPage}"
+            Route="ClientsPage" />
+        <ShellContent
+            Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Nav_Sales]}"
+            Icon="nav_sales.svg"
+            ContentTemplate="{DataTemplate views:SalesPage}"
+            Route="SalesPage" />
+        <ShellContent
+            Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Nav_PayCalendar]}"
+            Icon="nav_calendar.svg"
+            ContentTemplate="{DataTemplate views:PayCalendarPage}"
+            Route="PayCalendarPage" />
+        <ShellContent
+            Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Nav_Settings]}"
+            Icon="nav_settings.svg"
+            ContentTemplate="{DataTemplate views:SettingsPage}"
+            Route="SettingsPage" />
+    </TabBar>
+
+</Shell>

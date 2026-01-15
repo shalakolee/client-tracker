@@ -5,9 +5,9 @@ public class UpdateSettings
     public const string DefaultGitHubOwner = "shalakolee";
     public const string DefaultGitHubRepo = "client-tracker";
 
-    public const string DefaultWindowsPattern = "ClientTracker-windows.msix;msix";
-    public const string DefaultMacPattern = "ClientTracker-maccatalyst.dmg;dmg";
-    public const string DefaultAndroidPattern = "ClientTracker-android.apk;apk";
+    public const string DefaultWindowsPattern = "ClientTracker-windows;.msix;msix";
+    public const string DefaultMacPattern = "ClientTracker-maccatalyst;.dmg;dmg";
+    public const string DefaultAndroidPattern = "ClientTracker-android;.apk;apk";
 
     public string GitHubOwner { get; set; } = DefaultGitHubOwner;
     public string GitHubRepo { get; set; } = DefaultGitHubRepo;

@@ -12,6 +12,7 @@ env:
   DOTNET_VERSION: 10.0.100-rc.1.25451.107
   PROJECT_PATH: ClientTracker/ClientTracker.csproj
   CONFIGURATION: Release
+  RELEASE_TAG: ${{ github.event.release.tag_name }}
 
 jobs:
   build-android:
@@ -58,6 +59,8 @@ jobs:
         shell: bash
         run: |
           mkdir -p artifacts
+          VERSION="${RELEASE_TAG:-dev-${GITHUB_RUN_NUMBER}}"
+          VERSION="${VERSION#v}"
           echo "APKs produced:"
           find ClientTracker/bin/Release/net10.0-android -name "*.apk" -print || true
 
@@ -69,12 +72,12 @@ jobs:
             echo "No APK found."
             exit 1
           fi
-          cp "$APK_PATH" "artifacts/ClientTracker-android.apk"
+          cp "$APK_PATH" "artifacts/ClientTracker-android-${VERSION}.apk"
       - name: Upload Android artifact
         uses: actions/upload-artifact@v4
         with:
           name: android
-          path: artifacts/ClientTracker-android.apk
+          path: artifacts/ClientTracker-android-*.apk
 
   build-windows:
     runs-on: windows-latest
@@ -95,16 +98,18 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Path "artifacts" -Force | Out-Null
+          $version = if ($env:RELEASE_TAG) { $env:RELEASE_TAG } else { "dev-$env:GITHUB_RUN_NUMBER" }
+          if ($version.StartsWith("v")) { $version = $version.Substring(1) }
           $msix = Get-ChildItem -Path "ClientTracker/bin/Release/net10.0-windows10.0.19041.0/win-x64" -Recurse -Filter *.msix | Select-Object -First 1
           if (-not $msix) {
             throw "MSIX package not found."
           }
-          Copy-Item $msix.FullName -Destination "artifacts/ClientTracker-windows.msix" -Force
+          Copy-Item $msix.FullName -Destination "artifacts/ClientTracker-windows-$version.msix" -Force
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
           name: windows
-          path: artifacts/ClientTracker-windows.msix
+          path: artifacts/ClientTracker-windows-*.msix
 
   build-maccatalyst:
     runs-on: macos-latest
@@ -139,6 +144,8 @@ jobs:
         shell: bash
         run: |
           mkdir -p artifacts
+          VERSION="${RELEASE_TAG:-dev-${GITHUB_RUN_NUMBER}}"
+          VERSION="${VERSION#v}"
           APP_PATH=$(find ClientTracker/bin/Release/net8.0-maccatalyst -type d -name "*.app" | head -n 1)
           if [ -z "$APP_PATH" ]; then
             echo "No .app bundle found."
@@ -148,12 +155,12 @@ jobs:
           fi
           DMG_DIR=$(mktemp -d)
           cp -R "$APP_PATH" "$DMG_DIR/"
-          hdiutil create -volname "ClientTracker" -srcfolder "$DMG_DIR" -ov -format UDZO "artifacts/ClientTracker-maccatalyst.dmg"
+          hdiutil create -volname "ClientTracker" -srcfolder "$DMG_DIR" -ov -format UDZO "artifacts/ClientTracker-maccatalyst-${VERSION}.dmg"
       - name: Upload MacCatalyst artifact
         uses: actions/upload-artifact@v4
         with:
           name: maccatalyst
-          path: artifacts/ClientTracker-maccatalyst.dmg
+          path: artifacts/ClientTracker-maccatalyst-*.dmg
 
   publish-release:
     runs-on: ubuntu-latest

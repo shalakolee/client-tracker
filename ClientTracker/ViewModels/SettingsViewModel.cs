@@ -123,7 +123,7 @@ public class SettingsViewModel : ViewModelBase
         var window = app.Windows.FirstOrDefault();
         if (window is not null)
         {
-            window.Page = new AppShell();
+            window.Page = ShellFactory.CreateShell();
         }
     }
 

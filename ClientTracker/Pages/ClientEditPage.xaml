@@ -11,7 +11,7 @@
         <AppThemeBinding Light="{StaticResource AppBackgroundBrush}" Dark="{StaticResource AppBackgroundDarkBrush}" />
     </ContentPage.Background>
 
-    <Grid RowDefinitions="Auto,*">
+    <Grid RowDefinitions="Auto,*,Auto">
         <controls:TopBar Title="{Binding PageTitle}">
             <controls:TopBar.RightContent>
                 <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
@@ -54,6 +54,25 @@
             <Label Text="{Binding StatusMessage}" TextColor="{StaticResource Tertiary}" />
             </VerticalStackLayout>
         </ScrollView>
+
+        <!-- Mobile: make Save always reachable even when the top bar is crowded -->
+        <Border Grid.Row="2"
+                IsVisible="{OnPlatform Android=true, Default=false}"
+                BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceElevated}, Dark={StaticResource Gray950}}"
+                Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource Gray600}}"
+                StrokeThickness="1"
+                Padding="{StaticResource PagePadding}">
+            <Border.StrokeShape>
+                <RoundRectangle CornerRadius="18" />
+            </Border.StrokeShape>
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                <Label Text="{Binding StatusMessage}" Style="{StaticResource MutedLabel}" VerticalOptions="Center" LineBreakMode="TailTruncation" />
+                <Button Grid.Column="1"
+                        Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Save]}"
+                        Command="{Binding SaveClientCommand}"
+                        Style="{StaticResource BaseButton}" />
+            </Grid>
+        </Border>
     </Grid>
 </ContentPage>
 
