@@ -30,13 +30,18 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+      - name: Restore Android signing keystore (cache)
+        uses: actions/cache@v4
+        with:
+          path: .ci/android
+          key: android-keystore-v1
       - name: Create Android signing keystore
         shell: bash
         run: |
           mkdir -p .ci/android
-          if [ ! -f ".ci/android/clienttracker.keystore" ]; then
+          if [ ! -f "${GITHUB_WORKSPACE}/.ci/android/clienttracker.keystore" ]; then
             keytool -genkeypair -v \
-              -keystore ".ci/android/clienttracker.keystore" \
+              -keystore "${GITHUB_WORKSPACE}/.ci/android/clienttracker.keystore" \
               -storepass "clienttracker" \
               -alias "clienttracker" \
               -keypass "clienttracker" \
@@ -48,7 +53,7 @@ jobs:
       - name: Install Android workload
         run: dotnet workload install maui-android
       - name: Publish Android
-        run: dotnet publish "${PROJECT_PATH}" -c "${CONFIGURATION}" -f net10.0-android -p:AndroidPackageFormat=apk -p:AndroidKeyStore=true -p:AndroidSigningKeyStore=".ci/android/clienttracker.keystore" -p:AndroidSigningKeyAlias=clienttracker -p:AndroidSigningKeyPass=clienttracker -p:AndroidSigningStorePass=clienttracker -p:CI_TARGET_FRAMEWORKS=${{ env.CI_TARGET_FRAMEWORKS }}
+        run: dotnet publish "${PROJECT_PATH}" -c "${CONFIGURATION}" -f net10.0-android -p:AndroidPackageFormat=apk -p:AndroidKeyStore=true -p:AndroidSigningKeyStore="${GITHUB_WORKSPACE}/.ci/android/clienttracker.keystore" -p:AndroidSigningKeyAlias=clienttracker -p:AndroidSigningKeyPass=clienttracker -p:AndroidSigningStorePass=clienttracker -p:CI_TARGET_FRAMEWORKS=${{ env.CI_TARGET_FRAMEWORKS }}
       - name: Collect Android artifact
         shell: bash
         run: |
@@ -98,8 +103,8 @@ jobs:
   build-maccatalyst:
     runs-on: macos-latest
     env:
-      DOTNET_VERSION: 9.0.102
-      CI_TARGET_FRAMEWORKS: net9.0-maccatalyst
+      DOTNET_VERSION: 8.0.x
+      CI_TARGET_FRAMEWORKS: net8.0-maccatalyst
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -110,12 +115,12 @@ jobs:
       - name: Install MacCatalyst workload
         run: dotnet workload install maui-maccatalyst
       - name: Publish MacCatalyst
-        run: dotnet publish "${PROJECT_PATH}" -c "${CONFIGURATION}" -f net9.0-maccatalyst -r maccatalyst-x64 -p:CI_TARGET_FRAMEWORKS=${{ env.CI_TARGET_FRAMEWORKS }}
+        run: dotnet publish "${PROJECT_PATH}" -c "${CONFIGURATION}" -f net8.0-maccatalyst -r maccatalyst-x64 -p:CI_TARGET_FRAMEWORKS=${{ env.CI_TARGET_FRAMEWORKS }}
       - name: Collect MacCatalyst artifact
         shell: bash
         run: |
           mkdir -p artifacts
-          APP_PATH=$(find ClientTracker/bin/Release/net9.0-maccatalyst/maccatalyst-x64/publish -maxdepth 1 -name "*.app" | head -n 1)
+          APP_PATH=$(find ClientTracker/bin/Release/net8.0-maccatalyst/maccatalyst-x64/publish -maxdepth 1 -name "*.app" | head -n 1)
           if [ -z "$APP_PATH" ]; then
             echo "No .app bundle found."
             exit 1
