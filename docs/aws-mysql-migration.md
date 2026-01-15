@@ -9,7 +9,7 @@ To migrate that data into a MySQL database (e.g. AWS RDS), use the `ClientTracke
 Connect to your MySQL instance as an admin user and create a database (choose a name you want to use):
 
 ```sql
-CREATE DATABASE client_tracker CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE ak_client_tracker CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
 ### 2) Run the migrator
@@ -19,7 +19,7 @@ Set a MySQL connection string (do not commit it to git):
 PowerShell:
 
 ```powershell
-$env:CLIENTTRACKER_MYSQL_CONNECTION = "Server=<host>;Port=3306;Database=client_tracker;User ID=<user>;Password=<password>;SslMode=Required"
+$env:CLIENTTRACKER_MYSQL_CONNECTION = "Server=<host>;Port=3306;Database=ak_client_tracker;User ID=<user>;Password=<password>;SslMode=Required"
 dotnet run --project .\\ClientTracker.Migrator\\ClientTracker.Migrator.csproj -c Release
 ```
 
@@ -46,6 +46,6 @@ This repo includes a starter backend at `ClientTracker.Api` with a `/health` end
 Run locally:
 
 ```powershell
-$env:CLIENTTRACKER_MYSQL_CONNECTION = "Server=<host>;Port=3306;Database=client_tracker;User ID=<user>;Password=<password>;SslMode=Required"
+$env:CLIENTTRACKER_MYSQL_CONNECTION = "Server=<host>;Port=3306;Database=ak_client_tracker;User ID=<user>;Password=<password>;SslMode=Required"
 dotnet run --project .\\ClientTracker.Api\\ClientTracker.Api.csproj
 ```
