@@ -12,27 +12,27 @@
     <TabBar>
         <ShellContent
             Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Nav_Dashboard]}"
-            Icon="nav_dashboard.svg"
+            Icon="nav_dashboard"
             ContentTemplate="{DataTemplate views:DashboardPage}"
             Route="DashboardPage" />
         <ShellContent
             Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Nav_Clients]}"
-            Icon="nav_clients.svg"
+            Icon="nav_clients"
             ContentTemplate="{DataTemplate views:ClientsPage}"
             Route="ClientsPage" />
         <ShellContent
             Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Nav_Sales]}"
-            Icon="nav_sales.svg"
+            Icon="nav_sales"
             ContentTemplate="{DataTemplate views:SalesPage}"
             Route="SalesPage" />
         <ShellContent
             Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Nav_PayCalendar]}"
-            Icon="nav_calendar.svg"
+            Icon="nav_calendar"
             ContentTemplate="{DataTemplate views:PayCalendarPage}"
             Route="PayCalendarPage" />
         <ShellContent
             Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Nav_Settings]}"
-            Icon="nav_settings.svg"
+            Icon="nav_settings"
             ContentTemplate="{DataTemplate views:SettingsPage}"
             Route="SettingsPage" />
     </TabBar>

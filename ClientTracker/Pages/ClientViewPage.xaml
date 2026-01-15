@@ -153,7 +153,7 @@
                                                 <Border.StrokeShape>
                                                     <RoundRectangle CornerRadius="999" />
                                                 </Border.StrokeShape>
-                                                <Image Source="avatar.svg" WidthRequest="16" HeightRequest="16" HorizontalOptions="Center" VerticalOptions="Center" Opacity="0.95" />
+                                                <Image Source="avatar" WidthRequest="16" HeightRequest="16" HorizontalOptions="Center" VerticalOptions="Center" Opacity="0.95" />
                                             </Border>
 
                                             <VerticalStackLayout Grid.Column="1" Spacing="6">

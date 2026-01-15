@@ -13,7 +13,7 @@
             <ImageButton
                 BackgroundColor="Transparent"
                 Clicked="OnMenuClicked"
-                Source="nav_dashboard.svg"
+                Source="nav_dashboard"
                 Padding="10"
                 WidthRequest="40"
                 HeightRequest="40" />
@@ -35,7 +35,7 @@
                 <Border.StrokeShape>
                     <RoundRectangle CornerRadius="999" />
                 </Border.StrokeShape>
-                <Image Source="avatar.svg" WidthRequest="18" HeightRequest="18" HorizontalOptions="Center" VerticalOptions="Center" Opacity="0.9" />
+                <Image Source="avatar" WidthRequest="18" HeightRequest="18" HorizontalOptions="Center" VerticalOptions="Center" Opacity="0.9" />
             </Border>
         </HorizontalStackLayout>
 
@@ -49,7 +49,7 @@
                 <RoundRectangle CornerRadius="14" />
             </Border.StrokeShape>
             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                <Image Source="nav_sales.svg" WidthRequest="18" HeightRequest="18" Opacity="0.7" VerticalOptions="Center" />
+                <Image Source="nav_sales" WidthRequest="18" HeightRequest="18" Opacity="0.7" VerticalOptions="Center" />
                 <Entry Grid.Column="1"
                        Placeholder="{Binding SearchPlaceholder, Source={x:Reference Root}}"
                        Text="{Binding SearchText, Source={x:Reference Root}, Mode=TwoWay}"
