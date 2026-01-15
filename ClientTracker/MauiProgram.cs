@@ -49,7 +49,7 @@ public static class MauiProgram
 			{
 #if ANDROID
 				handler.PlatformView.SetHighlightColor(selection.ToPlatform());
-				var fill = view.BackgroundColor;
+				var fill = GetThemeColor(Color.FromArgb("#FFFFFF"), Color.FromArgb("#0F172A"));
 				var stroke = GetThemeColor(Color.FromArgb("#E2E8F0"), Color.FromArgb("#475569"));
 				ApplyAndroidInputBackground(handler.PlatformView, fill, stroke);
 #elif IOS || MACCATALYST
@@ -65,7 +65,7 @@ public static class MauiProgram
 			{
 #if ANDROID
 				handler.PlatformView.SetHighlightColor(selection.ToPlatform());
-				var fill = view.BackgroundColor;
+				var fill = GetThemeColor(Color.FromArgb("#FFFFFF"), Color.FromArgb("#0F172A"));
 				var stroke = GetThemeColor(Color.FromArgb("#E2E8F0"), Color.FromArgb("#475569"));
 				ApplyAndroidInputBackground(handler.PlatformView, fill, stroke);
 #elif IOS || MACCATALYST
@@ -80,7 +80,7 @@ public static class MauiProgram
 			PickerHandler.Mapper.AppendToMapping("ModernInputs", (handler, view) =>
 			{
 #if ANDROID
-				var fill = view.BackgroundColor;
+				var fill = GetThemeColor(Color.FromArgb("#FFFFFF"), Color.FromArgb("#0F172A"));
 				var stroke = GetThemeColor(Color.FromArgb("#E2E8F0"), Color.FromArgb("#475569"));
 				ApplyAndroidInputBackground(handler.PlatformView, fill, stroke);
 #elif IOS || MACCATALYST

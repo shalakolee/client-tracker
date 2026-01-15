@@ -188,6 +188,23 @@
   <data name="Settings_UpdateAndroidPattern" xml:space="preserve"><value>Assets Android (apk)</value></data>
   <data name="Settings_UpdatePreRelease" xml:space="preserve"><value>Incluir pre-releases</value></data>
   <data name="Settings_UpdateRequired" xml:space="preserve"><value>Exigir atualizacoes</value></data>
+  <data name="Settings_RemoteDb" xml:space="preserve"><value>Banco remoto</value></data>
+  <data name="Settings_UseRemoteDb" xml:space="preserve"><value>Usar MySQL remoto</value></data>
+  <data name="Settings_DbHost" xml:space="preserve"><value>Host</value></data>
+  <data name="Settings_DbPort" xml:space="preserve"><value>Porta</value></data>
+  <data name="Settings_DbName" xml:space="preserve"><value>Banco</value></data>
+  <data name="Settings_DbUser" xml:space="preserve"><value>Usuario</value></data>
+  <data name="Settings_DbPassword" xml:space="preserve"><value>Senha</value></data>
+  <data name="Settings_TestConnection" xml:space="preserve"><value>Testar</value></data>
+  <data name="Settings_SyncFromRemote" xml:space="preserve"><value>Sincronizar do remoto</value></data>
+  <data name="Settings_PushToRemote" xml:space="preserve"><value>Enviar para o remoto</value></data>
+  <data name="Settings_DbSaved" xml:space="preserve"><value>Configuracoes do banco salvas.</value></data>
+  <data name="Settings_DbConnectionOk" xml:space="preserve"><value>Conexao bem-sucedida.</value></data>
+  <data name="Settings_DbConnectionFailed" xml:space="preserve"><value>Falha na conexao. Verifique host, banco, usuario e senha.</value></data>
+  <data name="Settings_DbSyncFromRemoteConfirm" xml:space="preserve"><value>Isso substituira os dados locais pelos dados remotos. Continuar?</value></data>
+  <data name="Settings_DbPushToRemoteConfirm" xml:space="preserve"><value>Isso substituira os dados remotos pelos dados locais. Continuar?</value></data>
+  <data name="Settings_DbSyncComplete" xml:space="preserve"><value>Sincronizacao concluida.</value></data>
+  <data name="Settings_DbPushComplete" xml:space="preserve"><value>Envio concluido.</value></data>
   <data name="Update_Title" xml:space="preserve"><value>Atualizacao</value></data>
   <data name="Update_NotConfigured" xml:space="preserve"><value>Fonte de atualizacao ainda nao configurada.</value></data>
   <data name="Update_NotFound" xml:space="preserve"><value>Nenhuma release encontrada.</value></data>
@@ -204,4 +221,7 @@
   <data name="Update_Download" xml:space="preserve"><value>Baixar</value></data>
   <data name="Update_Later" xml:space="preserve"><value>Depois</value></data>
   <data name="Update_ViewNotes" xml:space="preserve"><value>Ver notas</value></data>
+  <data name="Action_OK" xml:space="preserve"><value>OK</value></data>
+  <data name="Action_Cancel" xml:space="preserve"><value>Cancelar</value></data>
+  <data name="Action_Continue" xml:space="preserve"><value>Continuar</value></data>
 </root>

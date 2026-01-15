@@ -62,6 +62,45 @@
             <Frame Style="{StaticResource CardFrame}">
                 <VerticalStackLayout Spacing="10">
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                        <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_RemoteDb]}" Style="{StaticResource SectionTitle}" />
+                        <Button
+                            Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Save]}"
+                            Command="{Binding SaveDatabaseConnectionCommand}"
+                            Style="{StaticResource InlineButton}"
+                            Grid.Column="1" />
+                    </Grid>
+
+                    <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="8">
+                        <Label Grid.Row="0" Grid.Column="0" Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_UseRemoteDb]}" Style="{StaticResource MutedLabel}" VerticalTextAlignment="Center" />
+                        <Switch Grid.Row="0" Grid.Column="1" IsToggled="{Binding UseRemoteMySql}" HorizontalOptions="Start" />
+
+                        <Label Grid.Row="1" Grid.Column="0" Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_DbHost]}" Style="{StaticResource MutedLabel}" VerticalTextAlignment="Center" />
+                        <Entry Grid.Row="1" Grid.Column="1" Text="{Binding DbHost}" Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_DbHost]}" />
+
+                        <Label Grid.Row="2" Grid.Column="0" Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_DbPort]}" Style="{StaticResource MutedLabel}" VerticalTextAlignment="Center" />
+                        <Entry Grid.Row="2" Grid.Column="1" Text="{Binding DbPort}" Keyboard="Numeric" Placeholder="3306" />
+
+                        <Label Grid.Row="3" Grid.Column="0" Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_DbName]}" Style="{StaticResource MutedLabel}" VerticalTextAlignment="Center" />
+                        <Entry Grid.Row="3" Grid.Column="1" Text="{Binding DbName}" Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_DbName]}" />
+
+                        <Label Grid.Row="4" Grid.Column="0" Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_DbUser]}" Style="{StaticResource MutedLabel}" VerticalTextAlignment="Center" />
+                        <Entry Grid.Row="4" Grid.Column="1" Text="{Binding DbUsername}" Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_DbUser]}" />
+
+                        <Label Grid.Row="5" Grid.Column="0" Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_DbPassword]}" Style="{StaticResource MutedLabel}" VerticalTextAlignment="Center" />
+                        <Entry Grid.Row="5" Grid.Column="1" Text="{Binding DbPassword}" IsPassword="True" Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_DbPassword]}" />
+                    </Grid>
+
+                    <HorizontalStackLayout Spacing="8">
+                        <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_TestConnection]}" Command="{Binding TestDatabaseConnectionCommand}" Style="{StaticResource InlineButton}" />
+                        <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_SyncFromRemote]}" Command="{Binding SyncFromRemoteDatabaseCommand}" Style="{StaticResource InlineButton}" />
+                        <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_PushToRemote]}" Command="{Binding PushLocalToRemoteDatabaseCommand}" Style="{StaticResource InlineButton}" />
+                    </HorizontalStackLayout>
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame Style="{StaticResource CardFrame}">
+                <VerticalStackLayout Spacing="10">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                         <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_Updates]}" Style="{StaticResource SectionTitle}" />
                         <HorizontalStackLayout Grid.Column="1" Spacing="8">
                             <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_CheckUpdates]}" Command="{Binding CheckUpdatesCommand}" Style="{StaticResource InlineButton}" />

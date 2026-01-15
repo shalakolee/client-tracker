@@ -188,6 +188,23 @@
   <data name="Settings_UpdateAndroidPattern" xml:space="preserve"><value>Android assets (apk)</value></data>
   <data name="Settings_UpdatePreRelease" xml:space="preserve"><value>Include pre-releases</value></data>
   <data name="Settings_UpdateRequired" xml:space="preserve"><value>Require updates</value></data>
+  <data name="Settings_RemoteDb" xml:space="preserve"><value>Remote database</value></data>
+  <data name="Settings_UseRemoteDb" xml:space="preserve"><value>Use remote MySQL</value></data>
+  <data name="Settings_DbHost" xml:space="preserve"><value>Host</value></data>
+  <data name="Settings_DbPort" xml:space="preserve"><value>Port</value></data>
+  <data name="Settings_DbName" xml:space="preserve"><value>Database</value></data>
+  <data name="Settings_DbUser" xml:space="preserve"><value>Username</value></data>
+  <data name="Settings_DbPassword" xml:space="preserve"><value>Password</value></data>
+  <data name="Settings_TestConnection" xml:space="preserve"><value>Test</value></data>
+  <data name="Settings_SyncFromRemote" xml:space="preserve"><value>Sync from remote</value></data>
+  <data name="Settings_PushToRemote" xml:space="preserve"><value>Push to remote</value></data>
+  <data name="Settings_DbSaved" xml:space="preserve"><value>Database settings saved.</value></data>
+  <data name="Settings_DbConnectionOk" xml:space="preserve"><value>Connection successful.</value></data>
+  <data name="Settings_DbConnectionFailed" xml:space="preserve"><value>Connection failed. Check host, database, username and password.</value></data>
+  <data name="Settings_DbSyncFromRemoteConfirm" xml:space="preserve"><value>This will replace local data with remote data. Continue?</value></data>
+  <data name="Settings_DbPushToRemoteConfirm" xml:space="preserve"><value>This will replace remote data with local data. Continue?</value></data>
+  <data name="Settings_DbSyncComplete" xml:space="preserve"><value>Sync complete.</value></data>
+  <data name="Settings_DbPushComplete" xml:space="preserve"><value>Push complete.</value></data>
   <data name="Update_Title" xml:space="preserve"><value>Update</value></data>
   <data name="Update_NotConfigured" xml:space="preserve"><value>Update source is not configured yet.</value></data>
   <data name="Update_NotFound" xml:space="preserve"><value>No releases found.</value></data>
@@ -204,4 +221,7 @@
   <data name="Update_Download" xml:space="preserve"><value>Download</value></data>
   <data name="Update_Later" xml:space="preserve"><value>Later</value></data>
   <data name="Update_ViewNotes" xml:space="preserve"><value>View notes</value></data>
+  <data name="Action_OK" xml:space="preserve"><value>OK</value></data>
+  <data name="Action_Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Action_Continue" xml:space="preserve"><value>Continue</value></data>
 </root>
