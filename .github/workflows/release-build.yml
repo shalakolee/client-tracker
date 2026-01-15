@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 env:
-  DOTNET_VERSION: 10.0.100-rc.1.25452.6
+  DOTNET_VERSION: 10.0.100-rc.1.25451.107
   PROJECT_PATH: ClientTracker/ClientTracker.csproj
   CONFIGURATION: Release
 
