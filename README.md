@@ -8,6 +8,11 @@ The app checks GitHub Releases for updates (repo is built-in) and will download/
 - MacCatalyst: downloads the `.dmg` and launches it.
 - Android: downloads the `.apk` and opens it for installation (platform limitation: installs cannot be silent).
 
+## Data
+
+- Local dev DB: `ClientTracker/data/client-tracker.db3` (SQLite)
+- MySQL migration guide: `docs/aws-mysql-migration.md`
+
 ## GitHub Releases
 
 ### Create a release build
