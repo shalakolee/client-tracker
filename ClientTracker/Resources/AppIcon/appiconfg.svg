@@ -1,12 +1,14 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg width="456" height="456" viewBox="0 0 456 456" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
-    <g>
-        <rect x="112" y="104" width="232" height="248" rx="44" fill="none" stroke="#ffffff" stroke-width="22" />
-        <circle cx="160" cy="160" r="14" fill="#ffffff" />
-        <path d="M 196 160 H 304" fill="none" stroke="#ffffff" stroke-width="18" stroke-linecap="round" />
-        <path d="M 160 210 H 304" fill="none" stroke="#ffffff" stroke-width="18" stroke-linecap="round" opacity="0.9" />
-        <path d="M 160 252 H 280" fill="none" stroke="#ffffff" stroke-width="18" stroke-linecap="round" opacity="0.75" />
-        <path d="M 168 292 L 214 338 L 320 232" fill="none" stroke="#ffffff" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+<svg width="456" height="456" viewBox="0 0 456 456" version="1.1" xmlns="http://www.w3.org/2000/svg">
+    <!-- Foreground: simple "AK" monogram (fontless for consistent rendering) -->
+    <g fill="none" stroke="#ffffff" stroke-width="32" stroke-linecap="round" stroke-linejoin="round" opacity="0.96">
+        <!-- A -->
+        <path d="M 148 324 L 194 140 L 240 324" />
+        <path d="M 170 252 H 218" />
+
+        <!-- K -->
+        <path d="M 276 140 V 324" />
+        <path d="M 276 236 L 334 140" />
+        <path d="M 276 236 L 340 324" />
     </g>
 </svg>
