@@ -51,7 +51,14 @@
                     </VerticalStackLayout>
                 </Frame>
 
-            <Label Text="{Binding StatusMessage}" TextColor="{StaticResource Tertiary}" />
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                <Label Text="{Binding StatusMessage}" TextColor="{StaticResource Tertiary}" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" />
+                <Button
+                    Grid.Column="1"
+                    Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Save]}"
+                    Command="{Binding SaveClientCommand}"
+                    Style="{StaticResource BaseButton}" />
+            </Grid>
             </VerticalStackLayout>
         </ScrollView>
 
