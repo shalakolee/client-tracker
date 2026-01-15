@@ -1,4 +1,5 @@
 using System.Windows.Input;
+using ClientTracker.Services;
 
 namespace ClientTracker.Controls;
 
@@ -23,6 +24,24 @@ public partial class TopBar : ContentView
         }
 
         Shell.Current.FlyoutIsPresented = true;
+    }
+
+    private async void OnUpdateClicked(object? sender, EventArgs e)
+    {
+        var service = UpdateService.Instance;
+        if (service is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await service.ShowUpdatePromptIfAvailableAsync();
+        }
+        catch (Exception ex)
+        {
+            StartupLog.Write(ex, "UpdateService.Prompt");
+        }
     }
 
     public static readonly BindableProperty TitleProperty =

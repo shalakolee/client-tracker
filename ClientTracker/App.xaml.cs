@@ -65,7 +65,8 @@ public partial class App : Application
             await Task.Delay(1500);
             try
             {
-                await _updateService.CheckForUpdatesAsync(false);
+                _updateService.StartBackgroundChecks();
+                await _updateService.CheckForUpdatesInBackgroundAsync();
             }
             catch (Exception ex)
             {

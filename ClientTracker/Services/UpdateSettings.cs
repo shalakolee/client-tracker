@@ -15,7 +15,7 @@ public class UpdateSettings
     public string MacAssetPattern { get; set; } = DefaultMacPattern;
     public string AndroidAssetPattern { get; set; } = DefaultAndroidPattern;
     public bool IncludePreReleases { get; set; } = false;
-    public bool RequireUpdates { get; set; } = true;
+    public bool RequireUpdates { get; set; } = false;
 
     public bool HasValidConfiguration => true;
 

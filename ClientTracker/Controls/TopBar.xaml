@@ -25,6 +25,11 @@
         </VerticalStackLayout>
 
         <HorizontalStackLayout Grid.Column="2" Spacing="8" VerticalOptions="Center" HorizontalOptions="End">
+            <Button
+                Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Update_Title]}"
+                Style="{StaticResource InlineButton}"
+                IsVisible="{Binding Source={x:Static services:UpdateService.Instance}, Path=IsUpdateAvailable}"
+                Clicked="OnUpdateClicked" />
             <ContentPresenter Content="{Binding RightContent, Source={x:Reference Root}}" />
             <Border WidthRequest="38" HeightRequest="38" BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAlt}, Dark={StaticResource Gray950}}" StrokeThickness="0" VerticalOptions="Center">
                 <Border.StrokeShape>

@@ -2,6 +2,8 @@ using System.Net.Http.Headers;
 using System.IO.Compression;
 using System.Diagnostics;
 using System.Text.Json;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Controls.Shapes;
 using Microsoft.Maui.Storage;
@@ -9,18 +11,128 @@ using PathIO = System.IO.Path;
 
 namespace ClientTracker.Services;
 
-public class UpdateService
+public class UpdateService : INotifyPropertyChanged
 {
     private readonly HttpClient _httpClient;
     private readonly LocalizationResourceManager _localization;
+    private readonly SemaphoreSlim _checkLock = new(1, 1);
+    private GitHubRelease? _availableRelease;
+    private bool _isChecking;
+    private bool _isUpdateAvailable;
+    private string _availableVersion = string.Empty;
+    private string _availableNotes = string.Empty;
+    private string _availableUrl = string.Empty;
+    private DateTimeOffset? _lastChecked;
+    private CancellationTokenSource? _backgroundCts;
+
+    public static UpdateService? Instance { get; private set; }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
 
     public UpdateService(HttpClient httpClient, LocalizationResourceManager localization)
     {
         _httpClient = httpClient;
         _localization = localization;
+        Instance = this;
     }
 
+    public bool IsChecking
+    {
+        get => _isChecking;
+        private set => SetProperty(ref _isChecking, value);
+    }
+
+    public bool IsUpdateAvailable
+    {
+        get => _isUpdateAvailable;
+        private set => SetProperty(ref _isUpdateAvailable, value);
+    }
+
+    public string AvailableVersion
+    {
+        get => _availableVersion;
+        private set => SetProperty(ref _availableVersion, value);
+    }
+
+    public string AvailableNotes
+    {
+        get => _availableNotes;
+        private set => SetProperty(ref _availableNotes, value);
+    }
+
+    public string AvailableUrl
+    {
+        get => _availableUrl;
+        private set => SetProperty(ref _availableUrl, value);
+    }
+
+    public DateTimeOffset? LastChecked
+    {
+        get => _lastChecked;
+        private set => SetProperty(ref _lastChecked, value);
+    }
+
+    public void StartBackgroundChecks(TimeSpan? interval = null)
+    {
+        if (_backgroundCts is not null)
+        {
+            return;
+        }
+
+        _backgroundCts = new CancellationTokenSource();
+        var loopInterval = interval ?? TimeSpan.FromHours(6);
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(TimeSpan.FromSeconds(2), _backgroundCts.Token);
+            while (!_backgroundCts.IsCancellationRequested)
+            {
+                try
+                {
+                    await CheckForUpdatesInBackgroundAsync(_backgroundCts.Token);
+                }
+                catch (Exception ex)
+                {
+                    StartupLog.Write(ex, "UpdateService.Background");
+                }
+
+                try
+                {
+                    await Task.Delay(loopInterval, _backgroundCts.Token);
+                }
+                catch (TaskCanceledException)
+                {
+                    break;
+                }
+            }
+        }, _backgroundCts.Token);
+    }
+
+    public void StopBackgroundChecks()
+    {
+        _backgroundCts?.Cancel();
+        _backgroundCts?.Dispose();
+        _backgroundCts = null;
+    }
+
+    public Task CheckForUpdatesInBackgroundAsync(CancellationToken cancellationToken = default)
+        => CheckForUpdatesInternalAsync(showIfNoUpdate: false, showPromptIfUpdate: false, cancellationToken);
+
     public async Task CheckForUpdatesAsync(bool showIfNoUpdate)
+        => await CheckForUpdatesInternalAsync(showIfNoUpdate, showPromptIfUpdate: true, CancellationToken.None);
+
+    public async Task ShowUpdatePromptIfAvailableAsync()
+    {
+        var settings = UpdateSettings.Load();
+        if (_availableRelease is null)
+        {
+            await CheckForUpdatesInternalAsync(showIfNoUpdate: true, showPromptIfUpdate: true, CancellationToken.None);
+            return;
+        }
+
+        await PromptAndMaybeInstallAsync(_availableRelease, settings);
+    }
+
+    private async Task CheckForUpdatesInternalAsync(bool showIfNoUpdate, bool showPromptIfUpdate, CancellationToken cancellationToken)
     {
         var settings = UpdateSettings.Load();
         if (!settings.HasValidConfiguration)
@@ -32,32 +144,76 @@ public class UpdateService
             return;
         }
 
-        var release = await GetLatestReleaseAsync(settings);
-        if (release is null)
+        await _checkLock.WaitAsync(cancellationToken);
+        try
         {
-            if (showIfNoUpdate)
+            IsChecking = true;
+
+            var release = await GetLatestReleaseAsync(settings);
+            LastChecked = DateTimeOffset.UtcNow;
+            if (release is null)
             {
-                await ShowAlertAsync(_localization["Update_Title"], _localization["Update_NotFound"]);
+                if (showIfNoUpdate)
+                {
+                    await ShowAlertAsync(_localization["Update_Title"], _localization["Update_NotFound"]);
+                }
+                return;
             }
+
+            if (!IsNewerVersion(release.TagName, AppInfo.VersionString))
+            {
+                IsUpdateAvailable = false;
+                AvailableVersion = string.Empty;
+                AvailableNotes = string.Empty;
+                AvailableUrl = string.Empty;
+                _availableRelease = null;
+
+                if (showIfNoUpdate)
+                {
+                    await ShowAlertAsync(_localization["Update_Title"], _localization["Update_NoUpdate"]);
+                }
+
+                return;
+            }
+
+            IsUpdateAvailable = true;
+            AvailableVersion = release.DisplayName;
+            AvailableNotes = release.Notes;
+            AvailableUrl = release.HtmlUrl;
+            _availableRelease = release;
+
+            if (!showPromptIfUpdate)
+            {
+                return;
+            }
+
+            await PromptAndMaybeInstallAsync(release, settings);
+        }
+        finally
+        {
+            IsChecking = false;
+            _checkLock.Release();
+        }
+    }
+
+    private async Task PromptAndMaybeInstallAsync(GitHubRelease release, UpdateSettings settings)
+    {
+        var choice = await ShowUpdatePromptAsync(release, settings.RequireUpdates);
+        if (choice == UpdateChoice.ViewNotes && !string.IsNullOrWhiteSpace(release.HtmlUrl))
+        {
+            await Launcher.OpenAsync(new Uri(release.HtmlUrl));
             return;
         }
 
-        if (!IsNewerVersion(release.TagName, AppInfo.VersionString))
+        if (choice != UpdateChoice.Download)
         {
-            if (showIfNoUpdate)
-            {
-                await ShowAlertAsync(_localization["Update_Title"], _localization["Update_NoUpdate"]);
-            }
             return;
         }
 
         var assetUrl = SelectAssetUrl(release.Assets, settings);
         if (string.IsNullOrWhiteSpace(assetUrl))
         {
-            if (showIfNoUpdate)
-            {
-                await ShowAlertAsync(_localization["Update_Title"], _localization["Update_NoAsset"]);
-            }
+            await ShowAlertAsync(_localization["Update_Title"], _localization["Update_NoAsset"]);
             return;
         }
 
@@ -547,4 +703,15 @@ public class UpdateService
 
     private sealed record GitHubRelease(string TagName, string DisplayName, string Notes, string HtmlUrl, List<GitHubAsset> Assets);
     private sealed record GitHubAsset(string Name, string DownloadUrl);
+
+    private void SetProperty<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
+    {
+        if (EqualityComparer<T>.Default.Equals(field, value))
+        {
+            return;
+        }
+
+        field = value;
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
 }
