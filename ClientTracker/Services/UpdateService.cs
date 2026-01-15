@@ -61,21 +61,7 @@ public class UpdateService
             return;
         }
 
-        while (true)
-        {
-            var choice = await ShowUpdatePromptAsync(release, settings.RequireUpdates);
-            if (choice == UpdateChoice.ViewNotes && !string.IsNullOrWhiteSpace(release.HtmlUrl))
-            {
-                await Browser.OpenAsync(release.HtmlUrl);
-                continue;
-            }
-
-            if (choice == UpdateChoice.Download)
-            {
-                await DownloadAndLaunchAsync(release.TagName, assetUrl);
-            }
-            return;
-        }
+        await DownloadAndLaunchAsync(release.TagName, assetUrl);
     }
 
     private async Task DownloadAndLaunchAsync(string releaseTag, string url)

@@ -33,7 +33,6 @@ public class SettingsViewModel : ViewModelBase
         _selectedLanguage = Languages.FirstOrDefault(l => l.CultureName == _localization.CurrentCulture.Name) ?? Languages[0];
         ApplyLanguageCommand = new Command(() => ApplyLanguage(SelectedLanguage));
         RefreshDiagnosticsCommand = new Command(async () => await RefreshDiagnosticsAsync());
-        SaveUpdateSettingsCommand = new Command(SaveUpdateSettings);
         CheckUpdatesCommand = new Command(async () => await _updateService.CheckForUpdatesAsync(true));
         LoadUpdateSettings();
         _ = RefreshDiagnosticsAsync();
@@ -50,7 +49,6 @@ public class SettingsViewModel : ViewModelBase
 
     public Command ApplyLanguageCommand { get; }
     public Command RefreshDiagnosticsCommand { get; }
-    public Command SaveUpdateSettingsCommand { get; }
     public Command CheckUpdatesCommand { get; }
 
     public string DatabasePath
@@ -146,22 +144,6 @@ public class SettingsViewModel : ViewModelBase
         AndroidAssetPattern = settings.AndroidAssetPattern;
         IncludePreReleases = settings.IncludePreReleases;
         RequireUpdates = settings.RequireUpdates;
-    }
-
-    private void SaveUpdateSettings()
-    {
-        var settings = new UpdateSettings
-        {
-            GitHubOwner = GitHubOwner,
-            GitHubRepo = GitHubRepo,
-            WindowsAssetPattern = WindowsAssetPattern,
-            MacAssetPattern = MacAssetPattern,
-            AndroidAssetPattern = AndroidAssetPattern,
-            IncludePreReleases = IncludePreReleases,
-            RequireUpdates = RequireUpdates
-        };
-
-        settings.Save();
     }
 }
 

@@ -64,35 +64,11 @@
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                         <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_Updates]}" Style="{StaticResource SectionTitle}" />
                         <HorizontalStackLayout Grid.Column="1" Spacing="8">
-                            <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_SaveUpdates]}" Command="{Binding SaveUpdateSettingsCommand}" Style="{StaticResource InlineButton}" />
                             <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_CheckUpdates]}" Command="{Binding CheckUpdatesCommand}" Style="{StaticResource InlineButton}" />
                         </HorizontalStackLayout>
                     </Grid>
-                    <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
-                        <Entry Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_UpdateOwner]}" Text="{Binding GitHubOwner}" />
-                        <Entry Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_UpdateRepo]}" Text="{Binding GitHubRepo}" Grid.Column="1" />
-                    </Grid>
-                    <Entry Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_UpdateWindowsPattern]}" Text="{Binding WindowsAssetPattern}" />
-                    <Entry Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_UpdateMacPattern]}" Text="{Binding MacAssetPattern}" />
-                    <Entry Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_UpdateAndroidPattern]}" Text="{Binding AndroidAssetPattern}" />
-                    <Border BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAlt}, Dark={StaticResource Gray900}}" StrokeThickness="0" Padding="12,10">
-                        <Border.StrokeShape>
-                            <RoundRectangle CornerRadius="14" />
-                        </Border.StrokeShape>
-                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_UpdatePreRelease]}" VerticalTextAlignment="Center" />
-                            <Switch IsToggled="{Binding IncludePreReleases}" Grid.Column="1" VerticalOptions="Center" />
-                        </Grid>
-                    </Border>
-                    <Border BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAlt}, Dark={StaticResource Gray900}}" StrokeThickness="0" Padding="12,10">
-                        <Border.StrokeShape>
-                            <RoundRectangle CornerRadius="14" />
-                        </Border.StrokeShape>
-                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_UpdateRequired]}" VerticalTextAlignment="Center" />
-                            <Switch IsToggled="{Binding RequireUpdates}" Grid.Column="1" VerticalOptions="Center" />
-                        </Grid>
-                    </Border>
+                    <Label Text="{Binding GitHubOwner}" Style="{StaticResource MutedLabel}" />
+                    <Label Text="{Binding GitHubRepo}" Style="{StaticResource MutedLabel}" />
                 </VerticalStackLayout>
             </Frame>
             </VerticalStackLayout>

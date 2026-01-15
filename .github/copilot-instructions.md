@@ -14,15 +14,15 @@ The **Client Tracker** project is a cross-platform application built using .NET 
 The project uses GitHub Actions for CI/CD, specifically defined in `.github/workflows/release-build.yml`. The build process is triggered on release events and can also be manually initiated.
 
 - **Build Commands**:
-  - **Android**: 
+  - **Android**:
     ```bash
     dotnet publish "ClientTracker/ClientTracker.csproj" -c "Release" -f net10.0-android -p:AndroidPackageFormat=apk
     ```
-  - **Windows**: 
+  - **Windows**:
     ```bash
     dotnet publish "$env:PROJECT_PATH" -c "$env:CONFIGURATION" -f net10.0-windows10.0.19041.0 -r win-x64 -p:WindowsPackageType=MSIX
     ```
-  - **MacCatalyst**: 
+  - **MacCatalyst**:
     ```bash
     dotnet publish "${PROJECT_PATH}" -c "${CONFIGURATION}" -f net10.0-maccatalyst -r maccatalyst-x64
     ```
@@ -43,3 +43,4 @@ While specific testing commands are not detailed in the current documentation, d
 
 ## Conclusion
 This document serves as a foundational guide for AI coding agents to navigate the Client Tracker codebase effectively. For any unclear sections or additional details needed, please provide feedback for further iterations.
+
