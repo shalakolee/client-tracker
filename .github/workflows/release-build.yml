@@ -115,7 +115,7 @@ jobs:
       - name: Install MacCatalyst workload
         run: dotnet workload install maui-maccatalyst
       - name: Publish MacCatalyst
-        run: dotnet publish "${PROJECT_PATH}" -c "${CONFIGURATION}" -f net8.0-maccatalyst -r maccatalyst-x64 -p:CI_TARGET_FRAMEWORKS=${{ env.CI_TARGET_FRAMEWORKS }}
+        run: dotnet publish "${PROJECT_PATH}" -c "${CONFIGURATION}" -f net8.0-maccatalyst -r maccatalyst-x64 -p:CI_TARGET_FRAMEWORKS=${{ env.CI_TARGET_FRAMEWORKS }} -p:CheckEolWorkloads=false -p:CheckEolTargetFramework=false
       - name: Collect MacCatalyst artifact
         shell: bash
         run: |
