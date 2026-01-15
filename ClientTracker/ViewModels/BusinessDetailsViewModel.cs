@@ -92,23 +92,26 @@ public class BusinessDetailsViewModel : ViewModelBase
 
     public async Task LoadAsync(int clientId)
     {
-        StatusMessage = string.Empty;
-        var client = await _database.GetClientByIdAsync(clientId);
-        if (client is null)
+        await RunBusyAsync(async () =>
         {
-            StatusMessage = "Client not found.";
-            return;
-        }
+            StatusMessage = string.Empty;
+            var client = await _database.GetClientByIdAsync(clientId);
+            if (client is null)
+            {
+                StatusMessage = "Client not found.";
+                return;
+            }
 
-        ClientId = client.Id;
-        ClientName = client.Name;
-        AddressLine1 = client.AddressLine1;
-        AddressLine2 = client.AddressLine2;
-        City = client.City;
-        StateProvince = client.StateProvince;
-        PostalCode = client.PostalCode;
-        Country = client.Country;
-        TaxId = client.TaxId;
+            ClientId = client.Id;
+            ClientName = client.Name;
+            AddressLine1 = client.AddressLine1;
+            AddressLine2 = client.AddressLine2;
+            City = client.City;
+            StateProvince = client.StateProvince;
+            PostalCode = client.PostalCode;
+            Country = client.Country;
+            TaxId = client.TaxId;
+        });
     }
 
     private async Task SaveAsync()

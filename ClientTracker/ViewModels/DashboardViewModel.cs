@@ -106,26 +106,29 @@ public class DashboardViewModel : ViewModelBase
 
     public async Task LoadAsync()
     {
-        ClientCount = await _database.GetClientCountAsync();
-        var sales = await _database.GetAllSalesAsync();
-        SaleCount = sales.Count;
-        TotalSalesAmount = sales.Sum(s => s.Amount);
+        await RunBusyAsync(async () =>
+        {
+            ClientCount = await _database.GetClientCountAsync();
+            var sales = await _database.GetAllSalesAsync();
+            SaleCount = sales.Count;
+            TotalSalesAmount = sales.Sum(s => s.Amount);
 
-        var payments = await _database.GetAllPaymentsAsync();
-        TotalCommissionAmount = payments.Sum(p => p.Commission);
-        OutstandingCommissionAmount = payments.Where(p => !p.IsPaid).Sum(p => p.Commission);
+            var payments = await _database.GetAllPaymentsAsync();
+            TotalCommissionAmount = payments.Sum(p => p.Commission);
+            OutstandingCommissionAmount = payments.Where(p => !p.IsPaid).Sum(p => p.Commission);
 
-        var month = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
-        var monthPayments = await _database.GetPaymentsForMonthAsync(month);
-        MonthCommission = monthPayments.Sum(p => p.Commission);
+            var month = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+            var monthPayments = await _database.GetPaymentsForMonthAsync(month);
+            MonthCommission = monthPayments.Sum(p => p.Commission);
 
-        var upcomingEnd = DateTime.Today.AddDays(30);
-        var upcomingPayments = payments.Where(p => p.PayDate >= DateTime.Today && p.PayDate <= upcomingEnd && !p.IsPaid).ToList();
-        UpcomingPaymentCount = upcomingPayments.Count;
-        UpcomingCommissionAmount = upcomingPayments.Sum(p => p.Commission);
+            var upcomingEnd = DateTime.Today.AddDays(30);
+            var upcomingPayments = payments.Where(p => p.PayDate >= DateTime.Today && p.PayDate <= upcomingEnd && !p.IsPaid).ToList();
+            UpcomingPaymentCount = upcomingPayments.Count;
+            UpcomingCommissionAmount = upcomingPayments.Sum(p => p.Commission);
 
-        BuildMonthlySummaries(sales, payments);
-        BuildTrends();
+            BuildMonthlySummaries(sales, payments);
+            BuildTrends();
+        });
     }
 
     private void BuildMonthlySummaries(IReadOnlyCollection<Sale> sales, IReadOnlyCollection<Payment> payments)

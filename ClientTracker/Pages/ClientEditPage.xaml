@@ -80,6 +80,7 @@
                         Style="{StaticResource BaseButton}" />
             </Grid>
         </Border>
+        <controls:LoadingOverlay Grid.RowSpan="3" ZIndex="99" />
     </Grid>
 </ContentPage>
 

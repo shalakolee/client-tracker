@@ -81,19 +81,22 @@ public class AddSaleViewModel : ViewModelBase
 
     public async Task LoadAsync(int? clientId = null)
     {
-        StatusMessage = string.Empty;
-        var selectedId = clientId ?? SelectedClient?.Id;
-        var clients = await _database.GetClientsAsync();
-        Clients.Clear();
-        foreach (var client in clients)
+        await RunBusyAsync(async () =>
         {
-            Clients.Add(client);
-        }
+            StatusMessage = string.Empty;
+            var selectedId = clientId ?? SelectedClient?.Id;
+            var clients = await _database.GetClientsAsync();
+            Clients.Clear();
+            foreach (var client in clients)
+            {
+                Clients.Add(client);
+            }
 
-        if (selectedId.HasValue)
-        {
-            SelectedClient = Clients.FirstOrDefault(c => c.Id == selectedId.Value);
-        }
+            if (selectedId.HasValue)
+            {
+                SelectedClient = Clients.FirstOrDefault(c => c.Id == selectedId.Value);
+            }
+        });
     }
 
     private async Task LoadContactsAsync()

@@ -100,33 +100,36 @@ public class SaleDetailsViewModel : ViewModelBase
 
     public async Task LoadAsync(int saleId)
     {
-        StatusMessage = string.Empty;
-        var sale = await _database.GetSaleByIdAsync(saleId);
-        if (sale is null)
+        await RunBusyAsync(async () =>
         {
-            StatusMessage = "Sale not found.";
-            return;
-        }
+            StatusMessage = string.Empty;
+            var sale = await _database.GetSaleByIdAsync(saleId);
+            if (sale is null)
+            {
+                StatusMessage = "Sale not found.";
+                return;
+            }
 
-        SaleId = sale.Id;
-        ClientId = sale.ClientId;
-        InvoiceNumber = sale.InvoiceNumber;
-        SaleDate = sale.SaleDate;
-        Amount = sale.Amount.ToString("0.00", CultureInfo.CurrentCulture);
-        CommissionPercent = sale.CommissionPercent.ToString("0.##", CultureInfo.CurrentCulture);
+            SaleId = sale.Id;
+            ClientId = sale.ClientId;
+            InvoiceNumber = sale.InvoiceNumber;
+            SaleDate = sale.SaleDate;
+            Amount = sale.Amount.ToString("0.00", CultureInfo.CurrentCulture);
+            CommissionPercent = sale.CommissionPercent.ToString("0.##", CultureInfo.CurrentCulture);
 
-        var client = await _database.GetClientByIdAsync(sale.ClientId);
-        ClientName = client?.Name ?? string.Empty;
+            var client = await _database.GetClientByIdAsync(sale.ClientId);
+            ClientName = client?.Name ?? string.Empty;
 
-        Contacts.Clear();
-        var contacts = await _database.GetContactsForClientAsync(sale.ClientId);
-        foreach (var contact in contacts)
-        {
-            Contacts.Add(contact);
-        }
+            Contacts.Clear();
+            var contacts = await _database.GetContactsForClientAsync(sale.ClientId);
+            foreach (var contact in contacts)
+            {
+                Contacts.Add(contact);
+            }
 
-        SelectedContact = Contacts.FirstOrDefault(c => c.Id == sale.ContactId);
-        await LoadPaymentsAsync(sale);
+            SelectedContact = Contacts.FirstOrDefault(c => c.Id == sale.ContactId);
+            await LoadPaymentsAsync(sale);
+        });
     }
 
     private async Task LoadPaymentsAsync(Sale sale)

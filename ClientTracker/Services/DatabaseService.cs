@@ -16,10 +16,8 @@ public class DatabaseService
     private DatabaseConnectionSettings? _remoteSettings;
     private string? _remoteConnectionString;
     private bool _remoteEnabled;
-    private bool _remoteInitialSyncAttempted;
     private readonly SemaphoreSlim _remoteGate = new(1, 1);
-    private readonly object _remotePushScheduleGate = new();
-    private CancellationTokenSource? _remotePushCts;
+    private bool _remoteSchemaEnsured;
 
     public DatabaseService()
     {
@@ -63,19 +61,6 @@ public class DatabaseService
         await EnsureIndexesAsync();
         await EnsurePaymentsForExistingSalesAsync();
         _initialized = true;
-
-        if (_remoteEnabled && !_remoteInitialSyncAttempted)
-        {
-            _remoteInitialSyncAttempted = true;
-            try
-            {
-                await SyncFromRemoteMySqlAsync();
-            }
-            catch (Exception ex)
-            {
-                StartupLog.Write(ex, "RemoteMySql.InitialSync");
-            }
-        }
     }
 
     private async Task EnsureRemoteSettingsAsync()
@@ -124,36 +109,74 @@ public class DatabaseService
         }
     }
 
-    private void QueueRemotePush()
+    private async Task<MySqlConnection?> TryOpenRemoteAsync()
     {
-        if (!_remoteEnabled)
+        await EnsureRemoteSettingsAsync();
+        if (!_remoteEnabled || string.IsNullOrWhiteSpace(_remoteConnectionString))
+        {
+            return null;
+        }
+
+        try
+        {
+            var conn = new MySqlConnection(_remoteConnectionString);
+            await conn.OpenAsync();
+            await EnsureRemoteSchemaAsync(conn);
+            return conn;
+        }
+        catch (Exception ex)
+        {
+            StartupLog.Write(ex, "RemoteMySql.Open");
+            return null;
+        }
+    }
+
+    private async Task EnsureRemoteSchemaAsync(MySqlConnection conn)
+    {
+        if (_remoteSchemaEnsured)
         {
             return;
         }
 
-        lock (_remotePushScheduleGate)
+        await _remoteGate.WaitAsync();
+        try
         {
-            _remotePushCts?.Cancel();
-            _remotePushCts?.Dispose();
-            _remotePushCts = new CancellationTokenSource();
-            var token = _remotePushCts.Token;
+            if (_remoteSchemaEnsured)
+            {
+                return;
+            }
 
-            _ = Task.Run(async () =>
+            await using var tx = await conn.BeginTransactionAsync();
+            await EnsureMySqlSchemaAsync(conn, tx);
+
+            // Best-effort: enable AUTO_INCREMENT if the schema was created by older migrator versions.
+            var alterStatements = new[]
+            {
+                "ALTER TABLE Client MODIFY COLUMN Id INT NOT NULL AUTO_INCREMENT;",
+                "ALTER TABLE Contact MODIFY COLUMN Id INT NOT NULL AUTO_INCREMENT;",
+                "ALTER TABLE Sale MODIFY COLUMN Id INT NOT NULL AUTO_INCREMENT;",
+                "ALTER TABLE Payment MODIFY COLUMN Id INT NOT NULL AUTO_INCREMENT;",
+                "ALTER TABLE AuditLog MODIFY COLUMN Id INT NOT NULL AUTO_INCREMENT;",
+            };
+
+            foreach (var sql in alterStatements)
             {
                 try
                 {
-                    await Task.Delay(1500, token);
-                    await PushLocalDataToRemoteMySqlAsync();
+                    await ExecMySqlAsync(conn, tx, sql);
                 }
-                catch (OperationCanceledException)
+                catch
                 {
-                    // ignored
+                    // ignore
                 }
-                catch (Exception ex)
-                {
-                    StartupLog.Write(ex, "RemoteMySql.ScheduledPush");
-                }
-            }, token);
+            }
+
+            await tx.CommitAsync();
+            _remoteSchemaEnsured = true;
+        }
+        finally
+        {
+            _remoteGate.Release();
         }
     }
 
@@ -311,7 +334,7 @@ public class DatabaseService
     {
         await ExecMySqlAsync(conn, tx, """
             CREATE TABLE IF NOT EXISTS Client (
-                Id INT NOT NULL,
+                Id INT NOT NULL AUTO_INCREMENT,
                 Name VARCHAR(255) NOT NULL,
                 AddressLine1 VARCHAR(255) NOT NULL DEFAULT '',
                 AddressLine2 VARCHAR(255) NOT NULL DEFAULT '',
@@ -333,7 +356,7 @@ public class DatabaseService
 
         await ExecMySqlAsync(conn, tx, """
             CREATE TABLE IF NOT EXISTS Contact (
-                Id INT NOT NULL,
+                Id INT NOT NULL AUTO_INCREMENT,
                 ClientId INT NOT NULL,
                 Name VARCHAR(255) NOT NULL,
                 Email VARCHAR(255) NOT NULL DEFAULT '',
@@ -351,7 +374,7 @@ public class DatabaseService
 
         await ExecMySqlAsync(conn, tx, """
             CREATE TABLE IF NOT EXISTS Sale (
-                Id INT NOT NULL,
+                Id INT NOT NULL AUTO_INCREMENT,
                 ClientId INT NOT NULL,
                 ContactId INT NOT NULL DEFAULT 0,
                 InvoiceNumber VARCHAR(255) NOT NULL DEFAULT '',
@@ -372,7 +395,7 @@ public class DatabaseService
 
         await ExecMySqlAsync(conn, tx, """
             CREATE TABLE IF NOT EXISTS Payment (
-                Id INT NOT NULL,
+                Id INT NOT NULL AUTO_INCREMENT,
                 SaleId INT NOT NULL,
                 PaymentDate DATE NOT NULL,
                 PayDate DATE NOT NULL,
@@ -393,7 +416,7 @@ public class DatabaseService
 
         await ExecMySqlAsync(conn, tx, """
             CREATE TABLE IF NOT EXISTS AuditLog (
-                Id INT NOT NULL,
+                Id INT NOT NULL AUTO_INCREMENT,
                 EntityType VARCHAR(255) NOT NULL,
                 EntityId INT NOT NULL,
                 Action VARCHAR(64) NOT NULL,
@@ -1192,9 +1215,31 @@ public class DatabaseService
         await _db.ExecuteAsync("CREATE INDEX IF NOT EXISTS IX_Payment_IsDeleted ON Payment(IsDeleted)");
     }
 
-    private Task LogAuditAsync(string entityType, int entityId, string action, string details)
+    private async Task LogAuditAsync(string entityType, int entityId, string action, string details)
     {
-        return _db.InsertAsync(new AuditLog
+        if (_remoteEnabled)
+        {
+            await using var conn = await TryOpenRemoteAsync();
+            if (conn is not null)
+            {
+                const string sql = """
+                    INSERT INTO AuditLog (EntityType, EntityId, Action, Details, TimestampUtc)
+                    VALUES (@EntityType, @EntityId, @Action, @Details, @TimestampUtc)
+                    """;
+
+                await using var cmd = new MySqlCommand(sql, conn);
+                cmd.Parameters.AddWithValue("@EntityType", entityType);
+                cmd.Parameters.AddWithValue("@EntityId", entityId);
+                cmd.Parameters.AddWithValue("@Action", action);
+                cmd.Parameters.AddWithValue("@Details", details);
+                cmd.Parameters.AddWithValue("@TimestampUtc", DateTime.UtcNow);
+                await cmd.ExecuteNonQueryAsync();
+                return;
+            }
+        }
+
+        await EnsureInitializedAsync();
+        await _db.InsertAsync(new AuditLog
         {
             EntityType = entityType,
             EntityId = entityId,
@@ -1206,6 +1251,20 @@ public class DatabaseService
 
     public async Task<int> GetActiveClientCountAsync()
     {
+        await EnsureRemoteSettingsAsync();
+        if (_remoteEnabled)
+        {
+            await using var conn = await TryOpenRemoteAsync();
+            if (conn is null)
+            {
+                return 0;
+            }
+
+            await using var cmd = new MySqlCommand("SELECT COUNT(*) FROM Client WHERE IsDeleted = 0", conn);
+            var value = await cmd.ExecuteScalarAsync();
+            return Convert.ToInt32(value);
+        }
+
         await EnsureInitializedAsync();
         return await _db.Table<Client>().Where(c => !c.IsDeleted).CountAsync();
     }
@@ -1227,6 +1286,70 @@ public class DatabaseService
 
     public async Task<List<Client>> GetClientsAsync(string? search = null)
     {
+        await EnsureRemoteSettingsAsync();
+        if (_remoteEnabled)
+        {
+            await using var conn = await TryOpenRemoteAsync();
+            if (conn is null)
+            {
+                return new List<Client>();
+            }
+
+            var sql = """
+                SELECT Id, Name, AddressLine1, AddressLine2, City, StateProvince, PostalCode, Country, TaxId, ContactName, ContactEmail, ContactPhone,
+                       CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc
+                FROM Client
+                WHERE IsDeleted = 0
+                """;
+
+            var parameters = new List<MySqlParameter>();
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                sql += """
+
+                  AND (
+                    Name LIKE @q OR City LIKE @q OR StateProvince LIKE @q OR Country LIKE @q OR TaxId LIKE @q
+                  )
+                """;
+                parameters.Add(new MySqlParameter("@q", $"%{search.Trim()}%"));
+            }
+
+            sql += " ORDER BY Name;";
+
+            await using var cmd = new MySqlCommand(sql, conn);
+            foreach (var p in parameters)
+            {
+                cmd.Parameters.Add(p);
+            }
+
+            var list = new List<Client>();
+            await using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                list.Add(new Client
+                {
+                    Id = reader.GetInt32(0),
+                    Name = reader.GetString(1),
+                    AddressLine1 = reader.GetString(2),
+                    AddressLine2 = reader.GetString(3),
+                    City = reader.GetString(4),
+                    StateProvince = reader.GetString(5),
+                    PostalCode = reader.GetString(6),
+                    Country = reader.GetString(7),
+                    TaxId = reader.GetString(8),
+                    ContactName = reader.GetString(9),
+                    ContactEmail = reader.GetString(10),
+                    ContactPhone = reader.GetString(11),
+                    CreatedUtc = reader.GetDateTime(12),
+                    UpdatedUtc = reader.GetDateTime(13),
+                    IsDeleted = reader.GetBoolean(14),
+                    DeletedUtc = reader.IsDBNull(15) ? null : reader.GetDateTime(15),
+                });
+            }
+
+            return list;
+        }
+
         await EnsureInitializedAsync();
         var query = _db.Table<Client>().Where(c => !c.IsDeleted);
 
@@ -1246,24 +1369,163 @@ public class DatabaseService
 
     public async Task<Client?> GetClientByIdAsync(int clientId)
     {
+        await EnsureRemoteSettingsAsync();
+        if (_remoteEnabled)
+        {
+            await using var conn = await TryOpenRemoteAsync();
+            if (conn is null)
+            {
+                return null;
+            }
+
+            const string sql = """
+                SELECT Id, Name, AddressLine1, AddressLine2, City, StateProvince, PostalCode, Country, TaxId, ContactName, ContactEmail, ContactPhone,
+                       CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc
+                FROM Client
+                WHERE Id = @Id AND IsDeleted = 0
+                LIMIT 1
+                """;
+
+            await using var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@Id", clientId);
+            await using var reader = await cmd.ExecuteReaderAsync();
+            if (!await reader.ReadAsync())
+            {
+                return null;
+            }
+
+            return new Client
+            {
+                Id = reader.GetInt32(0),
+                Name = reader.GetString(1),
+                AddressLine1 = reader.GetString(2),
+                AddressLine2 = reader.GetString(3),
+                City = reader.GetString(4),
+                StateProvince = reader.GetString(5),
+                PostalCode = reader.GetString(6),
+                Country = reader.GetString(7),
+                TaxId = reader.GetString(8),
+                ContactName = reader.GetString(9),
+                ContactEmail = reader.GetString(10),
+                ContactPhone = reader.GetString(11),
+                CreatedUtc = reader.GetDateTime(12),
+                UpdatedUtc = reader.GetDateTime(13),
+                IsDeleted = reader.GetBoolean(14),
+                DeletedUtc = reader.IsDBNull(15) ? null : reader.GetDateTime(15),
+            };
+        }
+
         await EnsureInitializedAsync();
         return await _db.Table<Client>().Where(c => c.Id == clientId && !c.IsDeleted).FirstOrDefaultAsync();
     }
 
     public async Task<ContactModel?> GetContactByIdAsync(int contactId)
     {
+        await EnsureRemoteSettingsAsync();
+        if (_remoteEnabled)
+        {
+            await using var conn = await TryOpenRemoteAsync();
+            if (conn is null)
+            {
+                return null;
+            }
+
+            const string sql = """
+                SELECT Id, ClientId, Name, Email, Phone, Notes, CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc
+                FROM Contact
+                WHERE Id = @Id AND IsDeleted = 0
+                LIMIT 1
+                """;
+            await using var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@Id", contactId);
+            await using var reader = await cmd.ExecuteReaderAsync();
+            if (!await reader.ReadAsync())
+            {
+                return null;
+            }
+
+            return new ContactModel
+            {
+                Id = reader.GetInt32(0),
+                ClientId = reader.GetInt32(1),
+                Name = reader.GetString(2),
+                Email = reader.GetString(3),
+                Phone = reader.GetString(4),
+                Notes = reader.GetString(5),
+                CreatedUtc = reader.GetDateTime(6),
+                UpdatedUtc = reader.GetDateTime(7),
+                IsDeleted = reader.GetBoolean(8),
+                DeletedUtc = reader.IsDBNull(9) ? null : reader.GetDateTime(9),
+            };
+        }
+
         await EnsureInitializedAsync();
         return await _db.Table<ContactModel>().Where(c => c.Id == contactId && !c.IsDeleted).FirstOrDefaultAsync();
     }
 
     public async Task<Client> AddClientAsync(string name)
     {
-        await EnsureInitializedAsync();
         return await AddClientAsync(new Client { Name = name.Trim() });
     }
 
     public async Task<Client> AddClientAsync(Client client)
     {
+        await EnsureRemoteSettingsAsync();
+        if (_remoteEnabled)
+        {
+            await using var conn = await TryOpenRemoteAsync();
+            if (conn is null)
+            {
+                return client;
+            }
+
+            var nowUtc = DateTime.UtcNow;
+            client.Name = client.Name.Trim();
+            client.TaxId = client.TaxId.Trim();
+            client.AddressLine1 = client.AddressLine1.Trim();
+            client.AddressLine2 = client.AddressLine2.Trim();
+            client.City = client.City.Trim();
+            client.StateProvince = client.StateProvince.Trim();
+            client.PostalCode = client.PostalCode.Trim();
+            client.Country = client.Country.Trim();
+            client.ContactName = client.ContactName.Trim();
+            client.ContactEmail = client.ContactEmail.Trim();
+            client.ContactPhone = client.ContactPhone.Trim();
+            client.CreatedUtc = nowUtc;
+            client.UpdatedUtc = nowUtc;
+            client.IsDeleted = false;
+            client.DeletedUtc = null;
+
+            const string sql = """
+                INSERT INTO Client
+                    (Name, AddressLine1, AddressLine2, City, StateProvince, PostalCode, Country, TaxId, ContactName, ContactEmail, ContactPhone,
+                     CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc)
+                VALUES
+                    (@Name, @AddressLine1, @AddressLine2, @City, @StateProvince, @PostalCode, @Country, @TaxId, @ContactName, @ContactEmail, @ContactPhone,
+                     @CreatedUtc, @UpdatedUtc, 0, NULL)
+                """;
+
+            await using var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@Name", client.Name);
+            cmd.Parameters.AddWithValue("@AddressLine1", client.AddressLine1);
+            cmd.Parameters.AddWithValue("@AddressLine2", client.AddressLine2);
+            cmd.Parameters.AddWithValue("@City", client.City);
+            cmd.Parameters.AddWithValue("@StateProvince", client.StateProvince);
+            cmd.Parameters.AddWithValue("@PostalCode", client.PostalCode);
+            cmd.Parameters.AddWithValue("@Country", client.Country);
+            cmd.Parameters.AddWithValue("@TaxId", client.TaxId);
+            cmd.Parameters.AddWithValue("@ContactName", client.ContactName);
+            cmd.Parameters.AddWithValue("@ContactEmail", client.ContactEmail);
+            cmd.Parameters.AddWithValue("@ContactPhone", client.ContactPhone);
+            cmd.Parameters.AddWithValue("@CreatedUtc", client.CreatedUtc);
+            cmd.Parameters.AddWithValue("@UpdatedUtc", client.UpdatedUtc);
+            await cmd.ExecuteNonQueryAsync();
+
+            client.Id = (int)cmd.LastInsertedId;
+            await LogAuditAsync(nameof(Client), client.Id, "create", $"Name={client.Name}");
+            return client;
+        }
+
         await EnsureInitializedAsync();
         var now = DateTime.UtcNow;
         client.Name = client.Name.Trim();
@@ -1282,21 +1544,137 @@ public class DatabaseService
         client.IsDeleted = false;
         await _db.InsertAsync(client);
         await LogAuditAsync(nameof(Client), client.Id, "create", $"Name={client.Name}");
-        QueueRemotePush();
         return client;
     }
 
     public async Task UpdateClientAsync(Client client)
     {
+        await EnsureRemoteSettingsAsync();
+        if (_remoteEnabled)
+        {
+            await using var conn = await TryOpenRemoteAsync();
+            if (conn is null)
+            {
+                return;
+            }
+
+            client.Name = client.Name?.Trim() ?? string.Empty;
+            client.TaxId = client.TaxId?.Trim() ?? string.Empty;
+            client.AddressLine1 = client.AddressLine1?.Trim() ?? string.Empty;
+            client.AddressLine2 = client.AddressLine2?.Trim() ?? string.Empty;
+            client.City = client.City?.Trim() ?? string.Empty;
+            client.StateProvince = client.StateProvince?.Trim() ?? string.Empty;
+            client.PostalCode = client.PostalCode?.Trim() ?? string.Empty;
+            client.Country = client.Country?.Trim() ?? string.Empty;
+            client.ContactName = client.ContactName?.Trim() ?? string.Empty;
+            client.ContactEmail = client.ContactEmail?.Trim() ?? string.Empty;
+            client.ContactPhone = client.ContactPhone?.Trim() ?? string.Empty;
+            client.UpdatedUtc = DateTime.UtcNow;
+
+            const string sql = """
+                UPDATE Client
+                SET Name=@Name,
+                    AddressLine1=@AddressLine1,
+                    AddressLine2=@AddressLine2,
+                    City=@City,
+                    StateProvince=@StateProvince,
+                    PostalCode=@PostalCode,
+                    Country=@Country,
+                    TaxId=@TaxId,
+                    ContactName=@ContactName,
+                    ContactEmail=@ContactEmail,
+                    ContactPhone=@ContactPhone,
+                    UpdatedUtc=@UpdatedUtc
+                WHERE Id=@Id
+                  AND IsDeleted = 0
+                """;
+
+            await using var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@Id", client.Id);
+            cmd.Parameters.AddWithValue("@Name", client.Name);
+            cmd.Parameters.AddWithValue("@AddressLine1", client.AddressLine1);
+            cmd.Parameters.AddWithValue("@AddressLine2", client.AddressLine2);
+            cmd.Parameters.AddWithValue("@City", client.City);
+            cmd.Parameters.AddWithValue("@StateProvince", client.StateProvince);
+            cmd.Parameters.AddWithValue("@PostalCode", client.PostalCode);
+            cmd.Parameters.AddWithValue("@Country", client.Country);
+            cmd.Parameters.AddWithValue("@TaxId", client.TaxId);
+            cmd.Parameters.AddWithValue("@ContactName", client.ContactName);
+            cmd.Parameters.AddWithValue("@ContactEmail", client.ContactEmail);
+            cmd.Parameters.AddWithValue("@ContactPhone", client.ContactPhone);
+            cmd.Parameters.AddWithValue("@UpdatedUtc", client.UpdatedUtc);
+            await cmd.ExecuteNonQueryAsync();
+            await LogAuditAsync(nameof(Client), client.Id, "update", $"Name={client.Name}");
+            return;
+        }
+
         await EnsureInitializedAsync();
         client.UpdatedUtc = DateTime.UtcNow;
         await _db.UpdateAsync(client);
         await LogAuditAsync(nameof(Client), client.Id, "update", $"Name={client.Name}");
-        QueueRemotePush();
     }
 
     public async Task DeleteClientAsync(Client client)
     {
+        await EnsureRemoteSettingsAsync();
+        if (_remoteEnabled)
+        {
+            await using var conn = await TryOpenRemoteAsync();
+            if (conn is null)
+            {
+                return;
+            }
+
+            var nowUtc = DateTime.UtcNow;
+
+            await using var tx = await conn.BeginTransactionAsync();
+            try
+            {
+                await using (var cmd = new MySqlCommand("UPDATE Client SET IsDeleted=1, DeletedUtc=@Now, UpdatedUtc=@Now WHERE Id=@Id", conn, (MySqlTransaction)tx))
+                {
+                    cmd.Parameters.AddWithValue("@Now", nowUtc);
+                    cmd.Parameters.AddWithValue("@Id", client.Id);
+                    await cmd.ExecuteNonQueryAsync();
+                }
+
+                await using (var cmd = new MySqlCommand("UPDATE Contact SET IsDeleted=1, DeletedUtc=@Now, UpdatedUtc=@Now WHERE ClientId=@Id", conn, (MySqlTransaction)tx))
+                {
+                    cmd.Parameters.AddWithValue("@Now", nowUtc);
+                    cmd.Parameters.AddWithValue("@Id", client.Id);
+                    await cmd.ExecuteNonQueryAsync();
+                }
+
+                await using (var cmd = new MySqlCommand("UPDATE Sale SET IsDeleted=1, DeletedUtc=@Now, UpdatedUtc=@Now WHERE ClientId=@Id", conn, (MySqlTransaction)tx))
+                {
+                    cmd.Parameters.AddWithValue("@Now", nowUtc);
+                    cmd.Parameters.AddWithValue("@Id", client.Id);
+                    await cmd.ExecuteNonQueryAsync();
+                }
+
+                await using (var cmd = new MySqlCommand("""
+                    UPDATE Payment p
+                    INNER JOIN Sale s ON p.SaleId = s.Id
+                    SET p.IsDeleted=1, p.DeletedUtc=@Now, p.UpdatedUtc=@Now
+                    WHERE s.ClientId=@Id
+                    """, conn, (MySqlTransaction)tx))
+                {
+                    cmd.Parameters.AddWithValue("@Now", nowUtc);
+                    cmd.Parameters.AddWithValue("@Id", client.Id);
+                    await cmd.ExecuteNonQueryAsync();
+                }
+
+                await tx.CommitAsync();
+            }
+            catch
+            {
+                await tx.RollbackAsync();
+                throw;
+            }
+
+            await LogAuditAsync(nameof(Client), client.Id, "delete", $"Soft deleted client {client.Id}");
+            return;
+        }
+
         await EnsureInitializedAsync();
         var now = DateTime.UtcNow;
         await _db.ExecuteAsync("UPDATE Client SET IsDeleted = 1, DeletedUtc = ?, UpdatedUtc = ? WHERE Id = ?", now, now, client.Id);
@@ -1308,11 +1686,51 @@ public class DatabaseService
             WHERE SaleId IN (SELECT Id FROM Sale WHERE ClientId = ?)
             """, now, now, client.Id);
         await LogAuditAsync(nameof(Client), client.Id, "delete", $"Soft deleted client {client.Id}");
-        QueueRemotePush();
     }
 
     public async Task<List<Sale>> GetSalesForClientAsync(int clientId)
     {
+        await EnsureRemoteSettingsAsync();
+        if (_remoteEnabled)
+        {
+            await using var conn = await TryOpenRemoteAsync();
+            if (conn is null)
+            {
+                return new List<Sale>();
+            }
+
+            const string sql = """
+                SELECT Id, ClientId, ContactId, InvoiceNumber, SaleDate, Amount, CommissionPercent, CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc
+                FROM Sale
+                WHERE ClientId=@ClientId AND IsDeleted=0
+                ORDER BY SaleDate DESC
+                """;
+
+            await using var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@ClientId", clientId);
+            var list = new List<Sale>();
+            await using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                list.Add(new Sale
+                {
+                    Id = reader.GetInt32(0),
+                    ClientId = reader.GetInt32(1),
+                    ContactId = reader.GetInt32(2),
+                    InvoiceNumber = reader.GetString(3),
+                    SaleDate = reader.GetDateTime(4),
+                    Amount = reader.GetDecimal(5),
+                    CommissionPercent = reader.GetDecimal(6),
+                    CreatedUtc = reader.GetDateTime(7),
+                    UpdatedUtc = reader.GetDateTime(8),
+                    IsDeleted = reader.GetBoolean(9),
+                    DeletedUtc = reader.IsDBNull(10) ? null : reader.GetDateTime(10),
+                });
+            }
+
+            return list;
+        }
+
         await EnsureInitializedAsync();
         return await _db.Table<Sale>()
             .Where(s => s.ClientId == clientId && !s.IsDeleted)
@@ -1322,6 +1740,29 @@ public class DatabaseService
 
     public async Task<int> GetClientCountAsync(string? search = null)
     {
+        await EnsureRemoteSettingsAsync();
+        if (_remoteEnabled)
+        {
+            await using var conn = await TryOpenRemoteAsync();
+            if (conn is null)
+            {
+                return 0;
+            }
+
+            var sql = "SELECT COUNT(*) FROM Client WHERE IsDeleted=0";
+            await using var cmd = new MySqlCommand();
+            cmd.Connection = conn;
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                sql += " AND (Name LIKE @q OR City LIKE @q OR StateProvince LIKE @q OR Country LIKE @q OR TaxId LIKE @q)";
+                cmd.Parameters.AddWithValue("@q", $"%{search.Trim()}%");
+            }
+
+            cmd.CommandText = sql;
+            var value = await cmd.ExecuteScalarAsync();
+            return Convert.ToInt32(value);
+        }
+
         await EnsureInitializedAsync();
         var query = _db.Table<Client>().Where(c => !c.IsDeleted);
         if (!string.IsNullOrWhiteSpace(search))
@@ -1340,6 +1781,72 @@ public class DatabaseService
 
     public async Task<List<Client>> GetClientsPageAsync(string? search, int page, int pageSize)
     {
+        await EnsureRemoteSettingsAsync();
+        if (_remoteEnabled)
+        {
+            await using var conn = await TryOpenRemoteAsync();
+            if (conn is null)
+            {
+                return new List<Client>();
+            }
+
+            var sql = """
+                SELECT Id, Name, AddressLine1, AddressLine2, City, StateProvince, PostalCode, Country, TaxId, ContactName, ContactEmail, ContactPhone,
+                       CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc
+                FROM Client
+                WHERE IsDeleted = 0
+                """;
+
+            var parameters = new List<MySqlParameter>();
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                sql += """
+
+                  AND (
+                    Name LIKE @q OR City LIKE @q OR StateProvince LIKE @q OR Country LIKE @q OR TaxId LIKE @q
+                  )
+                """;
+                parameters.Add(new MySqlParameter("@q", $"%{search.Trim()}%"));
+            }
+
+            sql += " ORDER BY Name LIMIT @Take OFFSET @Skip;";
+            parameters.Add(new MySqlParameter("@Take", pageSize));
+            parameters.Add(new MySqlParameter("@Skip", page * pageSize));
+
+            await using var cmd = new MySqlCommand(sql, conn);
+            foreach (var p in parameters)
+            {
+                cmd.Parameters.Add(p);
+            }
+
+            var list = new List<Client>();
+            await using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                list.Add(new Client
+                {
+                    Id = reader.GetInt32(0),
+                    Name = reader.GetString(1),
+                    AddressLine1 = reader.GetString(2),
+                    AddressLine2 = reader.GetString(3),
+                    City = reader.GetString(4),
+                    StateProvince = reader.GetString(5),
+                    PostalCode = reader.GetString(6),
+                    Country = reader.GetString(7),
+                    TaxId = reader.GetString(8),
+                    ContactName = reader.GetString(9),
+                    ContactEmail = reader.GetString(10),
+                    ContactPhone = reader.GetString(11),
+                    CreatedUtc = reader.GetDateTime(12),
+                    UpdatedUtc = reader.GetDateTime(13),
+                    IsDeleted = reader.GetBoolean(14),
+                    DeletedUtc = reader.IsDBNull(15) ? null : reader.GetDateTime(15),
+                });
+            }
+
+            return list;
+        }
+
         await EnsureInitializedAsync();
         var query = _db.Table<Client>().Where(c => !c.IsDeleted);
         if (!string.IsNullOrWhiteSpace(search))
@@ -1361,6 +1868,44 @@ public class DatabaseService
 
     public async Task<List<Sale>> GetAllSalesAsync()
     {
+        await EnsureRemoteSettingsAsync();
+        if (_remoteEnabled)
+        {
+            await using var conn = await TryOpenRemoteAsync();
+            if (conn is null)
+            {
+                return new List<Sale>();
+            }
+
+            const string sql = """
+                SELECT Id, ClientId, ContactId, InvoiceNumber, SaleDate, Amount, CommissionPercent, CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc
+                FROM Sale
+                WHERE IsDeleted=0
+                ORDER BY SaleDate DESC
+                """;
+            await using var cmd = new MySqlCommand(sql, conn);
+            var list = new List<Sale>();
+            await using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                list.Add(new Sale
+                {
+                    Id = reader.GetInt32(0),
+                    ClientId = reader.GetInt32(1),
+                    ContactId = reader.GetInt32(2),
+                    InvoiceNumber = reader.GetString(3),
+                    SaleDate = reader.GetDateTime(4),
+                    Amount = reader.GetDecimal(5),
+                    CommissionPercent = reader.GetDecimal(6),
+                    CreatedUtc = reader.GetDateTime(7),
+                    UpdatedUtc = reader.GetDateTime(8),
+                    IsDeleted = reader.GetBoolean(9),
+                    DeletedUtc = reader.IsDBNull(10) ? null : reader.GetDateTime(10),
+                });
+            }
+            return list;
+        }
+
         await EnsureInitializedAsync();
         return await _db.Table<Sale>()
             .Where(s => !s.IsDeleted)
@@ -1370,6 +1915,57 @@ public class DatabaseService
 
     public async Task<List<Sale>> GetSalesForClientIdsAsync(IReadOnlyCollection<int> clientIds)
     {
+        await EnsureRemoteSettingsAsync();
+        if (_remoteEnabled)
+        {
+            if (clientIds.Count == 0)
+            {
+                return new List<Sale>();
+            }
+
+            await using var conn = await TryOpenRemoteAsync();
+            if (conn is null)
+            {
+                return new List<Sale>();
+            }
+
+            var ids = clientIds.Distinct().ToArray();
+            var inParams = string.Join(",", ids.Select((_, i) => $"@id{i}"));
+            var sqlRemote = $"""
+                SELECT Id, ClientId, ContactId, InvoiceNumber, SaleDate, Amount, CommissionPercent, CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc
+                FROM Sale
+                WHERE IsDeleted=0 AND ClientId IN ({inParams})
+                """;
+
+            await using var cmd = new MySqlCommand(sqlRemote, conn);
+            for (var i = 0; i < ids.Length; i++)
+            {
+                cmd.Parameters.AddWithValue($"@id{i}", ids[i]);
+            }
+
+            var list = new List<Sale>();
+            await using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                list.Add(new Sale
+                {
+                    Id = reader.GetInt32(0),
+                    ClientId = reader.GetInt32(1),
+                    ContactId = reader.GetInt32(2),
+                    InvoiceNumber = reader.GetString(3),
+                    SaleDate = reader.GetDateTime(4),
+                    Amount = reader.GetDecimal(5),
+                    CommissionPercent = reader.GetDecimal(6),
+                    CreatedUtc = reader.GetDateTime(7),
+                    UpdatedUtc = reader.GetDateTime(8),
+                    IsDeleted = reader.GetBoolean(9),
+                    DeletedUtc = reader.IsDBNull(10) ? null : reader.GetDateTime(10),
+                });
+            }
+
+            return list;
+        }
+
         await EnsureInitializedAsync();
         if (clientIds.Count == 0)
         {
@@ -1383,12 +1979,98 @@ public class DatabaseService
 
     public async Task<Sale?> GetSaleByIdAsync(int saleId)
     {
+        await EnsureRemoteSettingsAsync();
+        if (_remoteEnabled)
+        {
+            await using var conn = await TryOpenRemoteAsync();
+            if (conn is null)
+            {
+                return null;
+            }
+
+            const string sql = """
+                SELECT Id, ClientId, ContactId, InvoiceNumber, SaleDate, Amount, CommissionPercent, CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc
+                FROM Sale
+                WHERE Id=@Id AND IsDeleted=0
+                LIMIT 1
+                """;
+
+            await using var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@Id", saleId);
+            await using var reader = await cmd.ExecuteReaderAsync();
+            if (!await reader.ReadAsync())
+            {
+                return null;
+            }
+
+            return new Sale
+            {
+                Id = reader.GetInt32(0),
+                ClientId = reader.GetInt32(1),
+                ContactId = reader.GetInt32(2),
+                InvoiceNumber = reader.GetString(3),
+                SaleDate = reader.GetDateTime(4),
+                Amount = reader.GetDecimal(5),
+                CommissionPercent = reader.GetDecimal(6),
+                CreatedUtc = reader.GetDateTime(7),
+                UpdatedUtc = reader.GetDateTime(8),
+                IsDeleted = reader.GetBoolean(9),
+                DeletedUtc = reader.IsDBNull(10) ? null : reader.GetDateTime(10),
+            };
+        }
+
         await EnsureInitializedAsync();
         return await _db.Table<Sale>().Where(s => s.Id == saleId && !s.IsDeleted).FirstOrDefaultAsync();
     }
 
     public async Task<List<SaleOverview>> GetSalesOverviewAsync()
     {
+        await EnsureRemoteSettingsAsync();
+        if (_remoteEnabled)
+        {
+            await using var conn = await TryOpenRemoteAsync();
+            if (conn is null)
+            {
+                return new List<SaleOverview>();
+            }
+
+            const string sqlRemote = """
+                SELECT
+                    s.Id AS SaleId,
+                    s.SaleDate AS SaleDate,
+                    s.Amount AS Amount,
+                    s.CommissionPercent AS CommissionPercent,
+                    s.InvoiceNumber AS InvoiceNumber,
+                    c.Name AS ClientName,
+                    COALESCE(co.Name, '') AS ContactName
+                FROM Sale s
+                INNER JOIN Client c ON s.ClientId = c.Id
+                LEFT JOIN Contact co ON s.ContactId = co.Id AND co.IsDeleted = 0
+                WHERE s.IsDeleted = 0
+                  AND c.IsDeleted = 0
+                ORDER BY s.SaleDate DESC
+                """;
+
+            var list = new List<SaleOverview>();
+            await using var cmd = new MySqlCommand(sqlRemote, conn);
+            await using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                list.Add(new SaleOverview
+                {
+                    SaleId = reader.GetInt32(0),
+                    SaleDate = reader.GetDateTime(1),
+                    Amount = reader.GetDecimal(2),
+                    CommissionPercent = reader.GetDecimal(3),
+                    InvoiceNumber = reader.GetString(4),
+                    ClientName = reader.GetString(5),
+                    ContactName = reader.GetString(6),
+                });
+            }
+
+            return list;
+        }
+
         await EnsureInitializedAsync();
         const string sql = """
             SELECT
@@ -1413,6 +2095,59 @@ public class DatabaseService
 
     public async Task<Sale> AddSaleAsync(Sale sale)
     {
+        await EnsureRemoteSettingsAsync();
+        if (_remoteEnabled)
+        {
+            await using var conn = await TryOpenRemoteAsync();
+            if (conn is null)
+            {
+                return sale;
+            }
+
+            var nowUtc = DateTime.UtcNow;
+            sale.CreatedUtc = nowUtc;
+            sale.UpdatedUtc = nowUtc;
+            sale.IsDeleted = false;
+
+            await using var tx = await conn.BeginTransactionAsync();
+            try
+            {
+                const string insertSale = """
+                    INSERT INTO Sale
+                        (ClientId, ContactId, InvoiceNumber, SaleDate, Amount, CommissionPercent, CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc)
+                    VALUES
+                        (@ClientId, @ContactId, @InvoiceNumber, @SaleDate, @Amount, @CommissionPercent, @CreatedUtc, @UpdatedUtc, 0, NULL)
+                    """;
+
+                await using (var cmd = new MySqlCommand(insertSale, conn, tx))
+                {
+                    cmd.Parameters.AddWithValue("@ClientId", sale.ClientId);
+                    cmd.Parameters.AddWithValue("@ContactId", sale.ContactId);
+                    cmd.Parameters.AddWithValue("@InvoiceNumber", sale.InvoiceNumber ?? string.Empty);
+                    cmd.Parameters.AddWithValue("@SaleDate", sale.SaleDate.Date);
+                    cmd.Parameters.AddWithValue("@Amount", sale.Amount);
+                    cmd.Parameters.AddWithValue("@CommissionPercent", sale.CommissionPercent);
+                    cmd.Parameters.AddWithValue("@CreatedUtc", sale.CreatedUtc);
+                    cmd.Parameters.AddWithValue("@UpdatedUtc", sale.UpdatedUtc);
+                    await cmd.ExecuteNonQueryAsync();
+                    sale.Id = (int)cmd.LastInsertedId;
+                }
+
+                var payments = BuildPaymentsForSale(sale, Array.Empty<Payment>(), nowUtc).ToList();
+                await InsertPaymentsForSaleAsync(conn, tx, sale.Id, payments);
+
+                await tx.CommitAsync();
+            }
+            catch
+            {
+                await tx.RollbackAsync();
+                throw;
+            }
+
+            await LogAuditAsync(nameof(Sale), sale.Id, "create", $"ClientId={sale.ClientId}, ContactId={sale.ContactId}, Invoice={sale.InvoiceNumber}");
+            return sale;
+        }
+
         await EnsureInitializedAsync();
         var now = DateTime.UtcNow;
         sale.CreatedUtc = now;
@@ -1421,18 +2156,88 @@ public class DatabaseService
         await _db.InsertAsync(sale);
         await UpsertPaymentsForSaleAsync(sale);
         await LogAuditAsync(nameof(Sale), sale.Id, "create", $"ClientId={sale.ClientId}, ContactId={sale.ContactId}, Invoice={sale.InvoiceNumber}");
-        QueueRemotePush();
         return sale;
     }
 
     public async Task UpdateSaleAsync(Sale sale)
     {
-        await EnsureInitializedAsync();
+        await EnsureRemoteSettingsAsync();
+        if (!_remoteEnabled)
+        {
+            await EnsureInitializedAsync();
+        }
+
         await UpdateSaleAsync(sale, true);
     }
 
     public async Task UpdateSaleAsync(Sale sale, bool regeneratePayments)
     {
+        await EnsureRemoteSettingsAsync();
+        if (_remoteEnabled)
+        {
+            await using var conn = await TryOpenRemoteAsync();
+            if (conn is null)
+            {
+                return;
+            }
+
+            sale.UpdatedUtc = DateTime.UtcNow;
+
+            await using var tx = await conn.BeginTransactionAsync();
+            try
+            {
+                const string updateSale = """
+                    UPDATE Sale
+                    SET ClientId=@ClientId,
+                        ContactId=@ContactId,
+                        InvoiceNumber=@InvoiceNumber,
+                        SaleDate=@SaleDate,
+                        Amount=@Amount,
+                        CommissionPercent=@CommissionPercent,
+                        UpdatedUtc=@UpdatedUtc
+                    WHERE Id=@Id AND IsDeleted=0
+                    """;
+
+                await using (var cmd = new MySqlCommand(updateSale, conn, tx))
+                {
+                    cmd.Parameters.AddWithValue("@Id", sale.Id);
+                    cmd.Parameters.AddWithValue("@ClientId", sale.ClientId);
+                    cmd.Parameters.AddWithValue("@ContactId", sale.ContactId);
+                    cmd.Parameters.AddWithValue("@InvoiceNumber", sale.InvoiceNumber ?? string.Empty);
+                    cmd.Parameters.AddWithValue("@SaleDate", sale.SaleDate.Date);
+                    cmd.Parameters.AddWithValue("@Amount", sale.Amount);
+                    cmd.Parameters.AddWithValue("@CommissionPercent", sale.CommissionPercent);
+                    cmd.Parameters.AddWithValue("@UpdatedUtc", sale.UpdatedUtc);
+                    await cmd.ExecuteNonQueryAsync();
+                }
+
+                if (regeneratePayments)
+                {
+                    var existing = await GetPaymentsForSaleRemoteAsync(conn, tx, sale.Id);
+
+                    await using (var cmd = new MySqlCommand("DELETE FROM Payment WHERE SaleId=@SaleId", conn, tx))
+                    {
+                        cmd.Parameters.AddWithValue("@SaleId", sale.Id);
+                        await cmd.ExecuteNonQueryAsync();
+                    }
+
+                    var now = DateTime.UtcNow;
+                    var payments = BuildPaymentsForSale(sale, existing, now).ToList();
+                    await InsertPaymentsForSaleAsync(conn, tx, sale.Id, payments);
+                }
+
+                await tx.CommitAsync();
+            }
+            catch
+            {
+                await tx.RollbackAsync();
+                throw;
+            }
+
+            await LogAuditAsync(nameof(Sale), sale.Id, "update", $"Invoice={sale.InvoiceNumber}");
+            return;
+        }
+
         await EnsureInitializedAsync();
         sale.UpdatedUtc = DateTime.UtcNow;
         await _db.UpdateAsync(sale);
@@ -1442,11 +2247,50 @@ public class DatabaseService
         }
 
         await LogAuditAsync(nameof(Sale), sale.Id, "update", $"Invoice={sale.InvoiceNumber}");
-        QueueRemotePush();
     }
 
     public async Task<List<ContactModel>> GetContactsForClientAsync(int clientId)
     {
+        await EnsureRemoteSettingsAsync();
+        if (_remoteEnabled)
+        {
+            await using var conn = await TryOpenRemoteAsync();
+            if (conn is null)
+            {
+                return new List<ContactModel>();
+            }
+
+            const string sql = """
+                SELECT Id, ClientId, Name, Email, Phone, Notes, CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc
+                FROM Contact
+                WHERE ClientId=@ClientId AND IsDeleted=0
+                ORDER BY Name
+                """;
+
+            await using var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@ClientId", clientId);
+            var list = new List<ContactModel>();
+            await using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                list.Add(new ContactModel
+                {
+                    Id = reader.GetInt32(0),
+                    ClientId = reader.GetInt32(1),
+                    Name = reader.GetString(2),
+                    Email = reader.GetString(3),
+                    Phone = reader.GetString(4),
+                    Notes = reader.GetString(5),
+                    CreatedUtc = reader.GetDateTime(6),
+                    UpdatedUtc = reader.GetDateTime(7),
+                    IsDeleted = reader.GetBoolean(8),
+                    DeletedUtc = reader.IsDBNull(9) ? null : reader.GetDateTime(9),
+                });
+            }
+
+            return list;
+        }
+
         await EnsureInitializedAsync();
         return await _db.Table<ContactModel>()
             .Where(c => c.ClientId == clientId && !c.IsDeleted)
@@ -1456,6 +2300,47 @@ public class DatabaseService
 
     public async Task<ContactModel> AddContactAsync(ContactModel contact)
     {
+        await EnsureRemoteSettingsAsync();
+        if (_remoteEnabled)
+        {
+            await using var conn = await TryOpenRemoteAsync();
+            if (conn is null)
+            {
+                return contact;
+            }
+
+            var nowUtc = DateTime.UtcNow;
+            contact.Name = contact.Name?.Trim() ?? string.Empty;
+            contact.Email = contact.Email?.Trim() ?? string.Empty;
+            contact.Phone = contact.Phone?.Trim() ?? string.Empty;
+            contact.Notes = contact.Notes?.Trim() ?? string.Empty;
+            contact.CreatedUtc = nowUtc;
+            contact.UpdatedUtc = nowUtc;
+            contact.IsDeleted = false;
+            contact.DeletedUtc = null;
+
+            const string sql = """
+                INSERT INTO Contact
+                    (ClientId, Name, Email, Phone, Notes, CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc)
+                VALUES
+                    (@ClientId, @Name, @Email, @Phone, @Notes, @CreatedUtc, @UpdatedUtc, 0, NULL)
+                """;
+
+            await using var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@ClientId", contact.ClientId);
+            cmd.Parameters.AddWithValue("@Name", contact.Name);
+            cmd.Parameters.AddWithValue("@Email", contact.Email);
+            cmd.Parameters.AddWithValue("@Phone", contact.Phone);
+            cmd.Parameters.AddWithValue("@Notes", contact.Notes);
+            cmd.Parameters.AddWithValue("@CreatedUtc", contact.CreatedUtc);
+            cmd.Parameters.AddWithValue("@UpdatedUtc", contact.UpdatedUtc);
+            await cmd.ExecuteNonQueryAsync();
+            contact.Id = (int)cmd.LastInsertedId;
+
+            await LogAuditAsync(nameof(ContactModel), contact.Id, "create", $"ClientId={contact.ClientId}, Name={contact.Name}");
+            return contact;
+        }
+
         await EnsureInitializedAsync();
         var now = DateTime.UtcNow;
         contact.Name = contact.Name?.Trim() ?? string.Empty;
@@ -1467,12 +2352,49 @@ public class DatabaseService
         contact.IsDeleted = false;
         await _db.InsertAsync(contact);
         await LogAuditAsync(nameof(ContactModel), contact.Id, "create", $"ClientId={contact.ClientId}, Name={contact.Name}");
-        QueueRemotePush();
         return contact;
     }
 
     public async Task UpdateContactAsync(ContactModel contact)
     {
+        await EnsureRemoteSettingsAsync();
+        if (_remoteEnabled)
+        {
+            await using var conn = await TryOpenRemoteAsync();
+            if (conn is null)
+            {
+                return;
+            }
+
+            contact.Name = contact.Name?.Trim() ?? string.Empty;
+            contact.Email = contact.Email?.Trim() ?? string.Empty;
+            contact.Phone = contact.Phone?.Trim() ?? string.Empty;
+            contact.Notes = contact.Notes?.Trim() ?? string.Empty;
+            contact.UpdatedUtc = DateTime.UtcNow;
+
+            const string sql = """
+                UPDATE Contact
+                SET Name=@Name,
+                    Email=@Email,
+                    Phone=@Phone,
+                    Notes=@Notes,
+                    UpdatedUtc=@UpdatedUtc
+                WHERE Id=@Id AND IsDeleted=0
+                """;
+
+            await using var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@Id", contact.Id);
+            cmd.Parameters.AddWithValue("@Name", contact.Name);
+            cmd.Parameters.AddWithValue("@Email", contact.Email);
+            cmd.Parameters.AddWithValue("@Phone", contact.Phone);
+            cmd.Parameters.AddWithValue("@Notes", contact.Notes);
+            cmd.Parameters.AddWithValue("@UpdatedUtc", contact.UpdatedUtc);
+            await cmd.ExecuteNonQueryAsync();
+
+            await LogAuditAsync(nameof(ContactModel), contact.Id, "update", $"Name={contact.Name}");
+            return;
+        }
+
         await EnsureInitializedAsync();
         contact.Name = contact.Name?.Trim() ?? string.Empty;
         contact.Email = contact.Email?.Trim() ?? string.Empty;
@@ -1481,26 +2403,118 @@ public class DatabaseService
         contact.UpdatedUtc = DateTime.UtcNow;
         await _db.UpdateAsync(contact);
         await LogAuditAsync(nameof(ContactModel), contact.Id, "update", $"Name={contact.Name}");
-        QueueRemotePush();
     }
 
     public async Task DeleteContactAsync(ContactModel contact)
     {
+        await EnsureRemoteSettingsAsync();
+        if (_remoteEnabled)
+        {
+            await using var conn = await TryOpenRemoteAsync();
+            if (conn is null)
+            {
+                return;
+            }
+
+            var nowUtc = DateTime.UtcNow;
+
+            await using var tx = await conn.BeginTransactionAsync();
+            try
+            {
+                await using (var cmd = new MySqlCommand("UPDATE Contact SET IsDeleted=1, DeletedUtc=@Now, UpdatedUtc=@Now WHERE Id=@Id", conn, tx))
+                {
+                    cmd.Parameters.AddWithValue("@Now", nowUtc);
+                    cmd.Parameters.AddWithValue("@Id", contact.Id);
+                    await cmd.ExecuteNonQueryAsync();
+                }
+
+                await using (var cmd = new MySqlCommand("UPDATE Sale SET ContactId=0, UpdatedUtc=@Now WHERE ContactId=@Id AND IsDeleted=0", conn, tx))
+                {
+                    cmd.Parameters.AddWithValue("@Now", nowUtc);
+                    cmd.Parameters.AddWithValue("@Id", contact.Id);
+                    await cmd.ExecuteNonQueryAsync();
+                }
+
+                await tx.CommitAsync();
+            }
+            catch
+            {
+                await tx.RollbackAsync();
+                throw;
+            }
+
+            await LogAuditAsync(nameof(ContactModel), contact.Id, "delete", $"Soft deleted contact {contact.Id}");
+            return;
+        }
+
         await EnsureInitializedAsync();
         var now = DateTime.UtcNow;
         await _db.ExecuteAsync("UPDATE Contact SET IsDeleted = 1, DeletedUtc = ?, UpdatedUtc = ? WHERE Id = ?", now, now, contact.Id);
         await LogAuditAsync(nameof(ContactModel), contact.Id, "delete", $"Soft deleted contact {contact.Id}");
-        QueueRemotePush();
     }
 
     public async Task<bool> ContactHasSalesAsync(int contactId)
     {
+        await EnsureRemoteSettingsAsync();
+        if (_remoteEnabled)
+        {
+            await using var conn = await TryOpenRemoteAsync();
+            if (conn is null)
+            {
+                return false;
+            }
+
+            await using var cmd = new MySqlCommand("SELECT COUNT(*) FROM Sale WHERE ContactId=@Id AND IsDeleted=0", conn);
+            cmd.Parameters.AddWithValue("@Id", contactId);
+            var value = await cmd.ExecuteScalarAsync();
+            return Convert.ToInt32(value) > 0;
+        }
+
         await EnsureInitializedAsync();
         return await _db.Table<Sale>().Where(s => s.ContactId == contactId && !s.IsDeleted).CountAsync() > 0;
     }
 
     public async Task<List<ContactModel>> GetAllContactsAsync()
     {
+        await EnsureRemoteSettingsAsync();
+        if (_remoteEnabled)
+        {
+            await using var conn = await TryOpenRemoteAsync();
+            if (conn is null)
+            {
+                return new List<ContactModel>();
+            }
+
+            const string sql = """
+                SELECT Id, ClientId, Name, Email, Phone, Notes, CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc
+                FROM Contact
+                WHERE IsDeleted=0
+                ORDER BY Name
+                """;
+
+            var list = new List<ContactModel>();
+            await using var cmd = new MySqlCommand(sql, conn);
+            await using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                list.Add(new ContactModel
+                {
+                    Id = reader.GetInt32(0),
+                    ClientId = reader.GetInt32(1),
+                    Name = reader.GetString(2),
+                    Email = reader.GetString(3),
+                    Phone = reader.GetString(4),
+                    Notes = reader.GetString(5),
+                    CreatedUtc = reader.GetDateTime(6),
+                    UpdatedUtc = reader.GetDateTime(7),
+                    IsDeleted = reader.GetBoolean(8),
+                    DeletedUtc = reader.IsDBNull(9) ? null : reader.GetDateTime(9),
+                });
+            }
+
+            return list;
+        }
+
         await EnsureInitializedAsync();
         return await _db.Table<ContactModel>()
             .Where(c => !c.IsDeleted)
@@ -1510,6 +2524,63 @@ public class DatabaseService
 
     public async Task<List<ContactOverview>> GetContactsOverviewAsync(string? search = null)
     {
+        await EnsureRemoteSettingsAsync();
+        if (_remoteEnabled)
+        {
+            await using var conn = await TryOpenRemoteAsync();
+            if (conn is null)
+            {
+                return new List<ContactOverview>();
+            }
+
+            var sqlRemote = """
+                SELECT
+                    co.Id AS ContactId,
+                    co.ClientId AS ClientId,
+                    c.Name AS ClientName,
+                    co.Name AS Name,
+                    co.Email AS Email,
+                    co.Phone AS Phone,
+                    co.Notes AS Notes
+                FROM Contact co
+                INNER JOIN Client c ON co.ClientId = c.Id
+                WHERE co.IsDeleted = 0
+                  AND c.IsDeleted = 0
+                ORDER BY co.Name
+                """;
+
+            var list = new List<ContactOverview>();
+            await using var cmd = new MySqlCommand(sqlRemote, conn);
+            await using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                list.Add(new ContactOverview
+                {
+                    ContactId = reader.GetInt32(0),
+                    ClientId = reader.GetInt32(1),
+                    ClientName = reader.GetString(2),
+                    Name = reader.GetString(3),
+                    Email = reader.GetString(4),
+                    Phone = reader.GetString(5),
+                    Notes = reader.GetString(6),
+                });
+            }
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var filterTerm = search.Trim();
+                return list.Where(c =>
+                        c.Name.Contains(filterTerm, StringComparison.OrdinalIgnoreCase) ||
+                        c.Email.Contains(filterTerm, StringComparison.OrdinalIgnoreCase) ||
+                        c.Phone.Contains(filterTerm, StringComparison.OrdinalIgnoreCase) ||
+                        c.Notes.Contains(filterTerm, StringComparison.OrdinalIgnoreCase) ||
+                        c.ClientName.Contains(filterTerm, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+            }
+
+            return list;
+        }
+
         await EnsureInitializedAsync();
         const string sql = """
             SELECT
@@ -1545,16 +2616,85 @@ public class DatabaseService
 
     public async Task DeleteSaleAsync(Sale sale)
     {
+        await EnsureRemoteSettingsAsync();
+        if (_remoteEnabled)
+        {
+            await using var conn = await TryOpenRemoteAsync();
+            if (conn is null)
+            {
+                return;
+            }
+
+            var nowUtc = DateTime.UtcNow;
+            await using var tx = await conn.BeginTransactionAsync();
+            try
+            {
+                await using (var cmd = new MySqlCommand("UPDATE Sale SET IsDeleted=1, DeletedUtc=@Now, UpdatedUtc=@Now WHERE Id=@Id", conn, tx))
+                {
+                    cmd.Parameters.AddWithValue("@Now", nowUtc);
+                    cmd.Parameters.AddWithValue("@Id", sale.Id);
+                    await cmd.ExecuteNonQueryAsync();
+                }
+
+                await using (var cmd = new MySqlCommand("UPDATE Payment SET IsDeleted=1, DeletedUtc=@Now, UpdatedUtc=@Now WHERE SaleId=@Id", conn, tx))
+                {
+                    cmd.Parameters.AddWithValue("@Now", nowUtc);
+                    cmd.Parameters.AddWithValue("@Id", sale.Id);
+                    await cmd.ExecuteNonQueryAsync();
+                }
+
+                await tx.CommitAsync();
+            }
+            catch
+            {
+                await tx.RollbackAsync();
+                throw;
+            }
+
+            await LogAuditAsync(nameof(Sale), sale.Id, "delete", $"Soft deleted sale {sale.Id}");
+            return;
+        }
+
         await EnsureInitializedAsync();
         var now = DateTime.UtcNow;
         await _db.ExecuteAsync("UPDATE Sale SET IsDeleted = 1, DeletedUtc = ?, UpdatedUtc = ? WHERE Id = ?", now, now, sale.Id);
         await _db.ExecuteAsync("UPDATE Payment SET IsDeleted = 1, DeletedUtc = ?, UpdatedUtc = ? WHERE SaleId = ?", now, now, sale.Id);
         await LogAuditAsync(nameof(Sale), sale.Id, "delete", $"Soft deleted sale {sale.Id}");
-        QueueRemotePush();
     }
 
     public async Task<List<Payment>> GetPaymentsForMonthAsync(DateTime month)
     {
+        await EnsureRemoteSettingsAsync();
+        if (_remoteEnabled)
+        {
+            await using var conn = await TryOpenRemoteAsync();
+            if (conn is null)
+            {
+                return new List<Payment>();
+            }
+
+            var monthStart = new DateTime(month.Year, month.Month, 1);
+            var monthEnd = monthStart.AddMonths(1).AddDays(-1);
+            const string sql = """
+                SELECT Id, SaleId, PaymentDate, PayDate, Amount, Commission, IsPaid, PaidDateUtc, CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc
+                FROM Payment
+                WHERE IsDeleted=0 AND PayDate >= @Start AND PayDate <= @End
+                ORDER BY PayDate, PaymentDate
+                """;
+
+            await using var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@Start", monthStart.Date);
+            cmd.Parameters.AddWithValue("@End", monthEnd.Date);
+            var list = new List<Payment>();
+            await using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                list.Add(ReadPayment(reader));
+            }
+
+            return list;
+        }
+
         await EnsureInitializedAsync();
         var start = new DateTime(month.Year, month.Month, 1);
         var end = start.AddMonths(1).AddDays(-1);
@@ -1567,6 +2707,39 @@ public class DatabaseService
 
     public async Task<List<Payment>> GetPaymentsBetweenAsync(DateTime start, DateTime end)
     {
+        await EnsureRemoteSettingsAsync();
+        if (_remoteEnabled)
+        {
+            await using var conn = await TryOpenRemoteAsync();
+            if (conn is null)
+            {
+                return new List<Payment>();
+            }
+
+            const string sqlRemote = """
+                SELECT p.Id, p.SaleId, p.PaymentDate, p.PayDate, p.Amount, p.Commission, p.IsPaid, p.PaidDateUtc, p.CreatedUtc, p.UpdatedUtc, p.IsDeleted, p.DeletedUtc
+                FROM Payment p
+                INNER JOIN Sale s ON p.SaleId = s.Id
+                WHERE p.IsDeleted = 0
+                  AND s.IsDeleted = 0
+                  AND p.PayDate >= @Start
+                  AND p.PayDate <= @End
+                ORDER BY p.PayDate, p.PaymentDate
+                """;
+
+            await using var cmd = new MySqlCommand(sqlRemote, conn);
+            cmd.Parameters.AddWithValue("@Start", start.Date);
+            cmd.Parameters.AddWithValue("@End", end.Date);
+            var list = new List<Payment>();
+            await using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                list.Add(ReadPayment(reader));
+            }
+
+            return list;
+        }
+
         await EnsureInitializedAsync();
         var sql = """
             SELECT p.* FROM Payment p
@@ -1583,6 +2756,35 @@ public class DatabaseService
 
     public async Task<List<Payment>> GetAllPaymentsAsync()
     {
+        await EnsureRemoteSettingsAsync();
+        if (_remoteEnabled)
+        {
+            await using var conn = await TryOpenRemoteAsync();
+            if (conn is null)
+            {
+                return new List<Payment>();
+            }
+
+            const string sqlRemote = """
+                SELECT p.Id, p.SaleId, p.PaymentDate, p.PayDate, p.Amount, p.Commission, p.IsPaid, p.PaidDateUtc, p.CreatedUtc, p.UpdatedUtc, p.IsDeleted, p.DeletedUtc
+                FROM Payment p
+                INNER JOIN Sale s ON p.SaleId = s.Id
+                WHERE p.IsDeleted = 0
+                  AND s.IsDeleted = 0
+                ORDER BY p.PayDate, p.PaymentDate
+                """;
+
+            await using var cmd = new MySqlCommand(sqlRemote, conn);
+            var list = new List<Payment>();
+            await using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                list.Add(ReadPayment(reader));
+            }
+
+            return list;
+        }
+
         await EnsureInitializedAsync();
         const string sql = """
             SELECT p.* FROM Payment p
@@ -1597,6 +2799,52 @@ public class DatabaseService
 
     public async Task<List<Payment>> GetPaymentsForClientIdsBetweenAsync(IReadOnlyCollection<int> clientIds, DateTime start, DateTime end)
     {
+        await EnsureRemoteSettingsAsync();
+        if (_remoteEnabled)
+        {
+            if (clientIds.Count == 0)
+            {
+                return new List<Payment>();
+            }
+
+            await using var conn = await TryOpenRemoteAsync();
+            if (conn is null)
+            {
+                return new List<Payment>();
+            }
+
+            var ids = clientIds.Distinct().ToArray();
+            var inParams = string.Join(",", ids.Select((_, i) => $"@id{i}"));
+            var sqlRemote = $"""
+                SELECT p.Id, p.SaleId, p.PaymentDate, p.PayDate, p.Amount, p.Commission, p.IsPaid, p.PaidDateUtc, p.CreatedUtc, p.UpdatedUtc, p.IsDeleted, p.DeletedUtc
+                FROM Payment p
+                INNER JOIN Sale s ON p.SaleId = s.Id
+                WHERE s.ClientId IN ({inParams})
+                  AND p.IsDeleted = 0
+                  AND s.IsDeleted = 0
+                  AND p.PayDate >= @Start
+                  AND p.PayDate <= @End
+                ORDER BY p.PayDate, p.PaymentDate
+                """;
+
+            await using var cmd = new MySqlCommand(sqlRemote, conn);
+            for (var i = 0; i < ids.Length; i++)
+            {
+                cmd.Parameters.AddWithValue($"@id{i}", ids[i]);
+            }
+            cmd.Parameters.AddWithValue("@Start", start.Date);
+            cmd.Parameters.AddWithValue("@End", end.Date);
+
+            var list = new List<Payment>();
+            await using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                list.Add(ReadPayment(reader));
+            }
+
+            return list;
+        }
+
         await EnsureInitializedAsync();
         if (clientIds.Count == 0)
         {
@@ -1620,6 +2868,33 @@ public class DatabaseService
 
     public async Task UpdatePaymentAsync(Payment payment)
     {
+        await EnsureRemoteSettingsAsync();
+        if (_remoteEnabled)
+        {
+            await using var conn = await TryOpenRemoteAsync();
+            if (conn is null)
+            {
+                return;
+            }
+
+            const string sql = """
+                UPDATE Payment
+                SET IsPaid=@IsPaid,
+                    PaidDateUtc=@PaidDateUtc,
+                    UpdatedUtc=@UpdatedUtc
+                WHERE Id=@Id AND IsDeleted=0
+                """;
+
+            await using var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@Id", payment.Id);
+            cmd.Parameters.AddWithValue("@IsPaid", payment.IsPaid);
+            cmd.Parameters.AddWithValue("@PaidDateUtc", payment.PaidDateUtc ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@UpdatedUtc", DateTime.UtcNow);
+            await cmd.ExecuteNonQueryAsync();
+            await LogAuditAsync(nameof(Payment), payment.Id, "update", $"IsPaid={payment.IsPaid}");
+            return;
+        }
+
         await EnsureInitializedAsync();
         var existing = await _db.Table<Payment>().Where(p => p.Id == payment.Id && !p.IsDeleted).FirstOrDefaultAsync();
         if (existing is null)
@@ -1632,11 +2907,38 @@ public class DatabaseService
         existing.UpdatedUtc = DateTime.UtcNow;
         await _db.UpdateAsync(existing);
         await LogAuditAsync(nameof(Payment), existing.Id, "update", $"IsPaid={existing.IsPaid}");
-        QueueRemotePush();
     }
 
     public async Task<List<Payment>> GetPaymentsForSaleAsync(int saleId)
     {
+        await EnsureRemoteSettingsAsync();
+        if (_remoteEnabled)
+        {
+            await using var conn = await TryOpenRemoteAsync();
+            if (conn is null)
+            {
+                return new List<Payment>();
+            }
+
+            const string sql = """
+                SELECT Id, SaleId, PaymentDate, PayDate, Amount, Commission, IsPaid, PaidDateUtc, CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc
+                FROM Payment
+                WHERE SaleId=@SaleId AND IsDeleted=0
+                ORDER BY PaymentDate
+                """;
+
+            await using var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@SaleId", saleId);
+            var list = new List<Payment>();
+            await using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                list.Add(ReadPayment(reader));
+            }
+
+            return list;
+        }
+
         await EnsureInitializedAsync();
         return await _db.Table<Payment>()
             .Where(p => p.SaleId == saleId && !p.IsDeleted)
@@ -1646,6 +2948,44 @@ public class DatabaseService
 
     public async Task<List<Payment>> GetPaymentsForSaleIdsAsync(IReadOnlyCollection<int> saleIds)
     {
+        await EnsureRemoteSettingsAsync();
+        if (_remoteEnabled)
+        {
+            if (saleIds.Count == 0)
+            {
+                return new List<Payment>();
+            }
+
+            await using var conn = await TryOpenRemoteAsync();
+            if (conn is null)
+            {
+                return new List<Payment>();
+            }
+
+            var ids = saleIds.Distinct().ToArray();
+            var inParams = string.Join(",", ids.Select((_, i) => $"@id{i}"));
+            var sqlRemote = $"""
+                SELECT Id, SaleId, PaymentDate, PayDate, Amount, Commission, IsPaid, PaidDateUtc, CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc
+                FROM Payment
+                WHERE IsDeleted=0 AND SaleId IN ({inParams})
+                """;
+
+            await using var cmd = new MySqlCommand(sqlRemote, conn);
+            for (var i = 0; i < ids.Length; i++)
+            {
+                cmd.Parameters.AddWithValue($"@id{i}", ids[i]);
+            }
+
+            var list = new List<Payment>();
+            await using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                list.Add(ReadPayment(reader));
+            }
+
+            return list;
+        }
+
         await EnsureInitializedAsync();
         if (saleIds.Count == 0)
         {
@@ -1659,12 +2999,47 @@ public class DatabaseService
 
     public async Task<int> GetPaymentCountAsync()
     {
+        await EnsureRemoteSettingsAsync();
+        if (_remoteEnabled)
+        {
+            await using var conn = await TryOpenRemoteAsync();
+            if (conn is null)
+            {
+                return 0;
+            }
+
+            await using var cmd = new MySqlCommand("SELECT COUNT(*) FROM Payment WHERE IsDeleted=0", conn);
+            var value = await cmd.ExecuteScalarAsync();
+            return Convert.ToInt32(value);
+        }
+
         await EnsureInitializedAsync();
         return await _db.Table<Payment>().Where(p => !p.IsDeleted).CountAsync();
     }
 
     public async Task<(DateTime? MinPayDate, DateTime? MaxPayDate)> GetPaymentPayDateRangeAsync()
     {
+        await EnsureRemoteSettingsAsync();
+        if (_remoteEnabled)
+        {
+            await using var conn = await TryOpenRemoteAsync();
+            if (conn is null)
+            {
+                return (null, null);
+            }
+
+            await using var cmd = new MySqlCommand("SELECT MIN(PayDate), MAX(PayDate) FROM Payment WHERE IsDeleted=0", conn);
+            await using var reader = await cmd.ExecuteReaderAsync();
+            if (!await reader.ReadAsync())
+            {
+                return (null, null);
+            }
+
+            var min = reader.IsDBNull(0) ? (DateTime?)null : reader.GetDateTime(0);
+            var max = reader.IsDBNull(1) ? (DateTime?)null : reader.GetDateTime(1);
+            return (min, max);
+        }
+
         await EnsureInitializedAsync();
         var payments = await _db.Table<Payment>()
             .Where(p => !p.IsDeleted)
@@ -1680,6 +3055,43 @@ public class DatabaseService
 
     public async Task UpdatePaymentDetailsAsync(Payment payment)
     {
+        await EnsureRemoteSettingsAsync();
+        if (_remoteEnabled)
+        {
+            await using var conn = await TryOpenRemoteAsync();
+            if (conn is null)
+            {
+                return;
+            }
+
+            const string sql = """
+                UPDATE Payment
+                SET PaymentDate=@PaymentDate,
+                    PayDate=@PayDate,
+                    Amount=@Amount,
+                    Commission=@Commission,
+                    IsPaid=@IsPaid,
+                    PaidDateUtc=@PaidDateUtc,
+                    UpdatedUtc=@UpdatedUtc
+                WHERE Id=@Id AND IsDeleted=0
+                """;
+
+            var updatedUtc = DateTime.UtcNow;
+            DateTime? paidDateUtc = payment.IsPaid ? (payment.PaidDateUtc ?? updatedUtc) : null;
+            await using var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@Id", payment.Id);
+            cmd.Parameters.AddWithValue("@PaymentDate", payment.PaymentDate.Date);
+            cmd.Parameters.AddWithValue("@PayDate", payment.PayDate.Date);
+            cmd.Parameters.AddWithValue("@Amount", payment.Amount);
+            cmd.Parameters.AddWithValue("@Commission", payment.Commission);
+            cmd.Parameters.AddWithValue("@IsPaid", payment.IsPaid);
+            cmd.Parameters.AddWithValue("@PaidDateUtc", paidDateUtc ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@UpdatedUtc", updatedUtc);
+            await cmd.ExecuteNonQueryAsync();
+            await LogAuditAsync(nameof(Payment), payment.Id, "update", $"PaymentDate={payment.PaymentDate:O}");
+            return;
+        }
+
         await EnsureInitializedAsync();
         var existing = await _db.Table<Payment>().Where(p => p.Id == payment.Id && !p.IsDeleted).FirstOrDefaultAsync();
         if (existing is null)
@@ -1697,7 +3109,86 @@ public class DatabaseService
 
         await _db.UpdateAsync(existing);
         await LogAuditAsync(nameof(Payment), existing.Id, "update", $"PaymentDate={existing.PaymentDate:O}");
-        QueueRemotePush();
+    }
+
+    private static Payment ReadPayment(MySqlDataReader reader)
+    {
+        return new Payment
+        {
+            Id = reader.GetInt32(0),
+            SaleId = reader.GetInt32(1),
+            PaymentDate = reader.GetDateTime(2),
+            PayDate = reader.GetDateTime(3),
+            Amount = reader.GetDecimal(4),
+            Commission = reader.GetDecimal(5),
+            IsPaid = reader.GetBoolean(6),
+            PaidDateUtc = reader.IsDBNull(7) ? null : reader.GetDateTime(7),
+            CreatedUtc = reader.GetDateTime(8),
+            UpdatedUtc = reader.GetDateTime(9),
+            IsDeleted = reader.GetBoolean(10),
+            DeletedUtc = reader.IsDBNull(11) ? null : reader.GetDateTime(11),
+        };
+    }
+
+    private static async Task<List<Payment>> GetPaymentsForSaleRemoteAsync(MySqlConnection conn, MySqlTransaction tx, int saleId)
+    {
+        const string sql = """
+            SELECT Id, SaleId, PaymentDate, PayDate, Amount, Commission, IsPaid, PaidDateUtc, CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc
+            FROM Payment
+            WHERE SaleId=@SaleId AND IsDeleted=0
+            ORDER BY PaymentDate
+            """;
+
+        var list = new List<Payment>();
+        await using var cmd = new MySqlCommand(sql, conn, tx);
+        cmd.Parameters.AddWithValue("@SaleId", saleId);
+        await using var reader = await cmd.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+        {
+            list.Add(ReadPayment(reader));
+        }
+
+        return list;
+    }
+
+    private static async Task InsertPaymentsForSaleAsync(MySqlConnection conn, MySqlTransaction tx, int saleId, IReadOnlyCollection<Payment> payments)
+    {
+        if (payments.Count == 0)
+        {
+            return;
+        }
+
+        const string sql = """
+            INSERT INTO Payment
+                (SaleId, PaymentDate, PayDate, Amount, Commission, IsPaid, PaidDateUtc, CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc)
+            VALUES
+                (@SaleId, @PaymentDate, @PayDate, @Amount, @Commission, @IsPaid, @PaidDateUtc, @CreatedUtc, @UpdatedUtc, 0, NULL)
+            """;
+
+        await using var cmd = new MySqlCommand(sql, conn, tx);
+        cmd.Parameters.Add("@SaleId", MySqlDbType.Int32);
+        cmd.Parameters.Add("@PaymentDate", MySqlDbType.Date);
+        cmd.Parameters.Add("@PayDate", MySqlDbType.Date);
+        cmd.Parameters.Add("@Amount", MySqlDbType.NewDecimal);
+        cmd.Parameters.Add("@Commission", MySqlDbType.NewDecimal);
+        cmd.Parameters.Add("@IsPaid", MySqlDbType.Bool);
+        cmd.Parameters.Add("@PaidDateUtc", MySqlDbType.DateTime);
+        cmd.Parameters.Add("@CreatedUtc", MySqlDbType.DateTime);
+        cmd.Parameters.Add("@UpdatedUtc", MySqlDbType.DateTime);
+
+        foreach (var payment in payments)
+        {
+            cmd.Parameters["@SaleId"].Value = saleId;
+            cmd.Parameters["@PaymentDate"].Value = payment.PaymentDate.Date;
+            cmd.Parameters["@PayDate"].Value = payment.PayDate.Date;
+            cmd.Parameters["@Amount"].Value = payment.Amount;
+            cmd.Parameters["@Commission"].Value = payment.Commission;
+            cmd.Parameters["@IsPaid"].Value = payment.IsPaid;
+            cmd.Parameters["@PaidDateUtc"].Value = payment.PaidDateUtc ?? (object)DBNull.Value;
+            cmd.Parameters["@CreatedUtc"].Value = payment.CreatedUtc;
+            cmd.Parameters["@UpdatedUtc"].Value = payment.UpdatedUtc;
+            await cmd.ExecuteNonQueryAsync();
+        }
     }
 
     private async Task UpsertPaymentsForSaleAsync(Sale sale)

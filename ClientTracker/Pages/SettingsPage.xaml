@@ -92,8 +92,6 @@
 
                     <HorizontalStackLayout Spacing="8">
                         <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_TestConnection]}" Command="{Binding TestDatabaseConnectionCommand}" Style="{StaticResource InlineButton}" />
-                        <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_SyncFromRemote]}" Command="{Binding SyncFromRemoteDatabaseCommand}" Style="{StaticResource InlineButton}" />
-                        <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_PushToRemote]}" Command="{Binding PushLocalToRemoteDatabaseCommand}" Style="{StaticResource InlineButton}" />
                     </HorizontalStackLayout>
                 </VerticalStackLayout>
             </Frame>
@@ -112,6 +110,7 @@
             </Frame>
             </VerticalStackLayout>
         </ScrollView>
+        <controls:LoadingOverlay Grid.RowSpan="2" ZIndex="99" />
     </Grid>
 </ContentPage>
 

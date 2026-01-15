@@ -62,15 +62,18 @@ public class ContactsViewModel : ViewModelBase
 
     public async Task LoadAsync()
     {
-        StatusMessage = string.Empty;
-        await EnsureClientFiltersAsync();
-        var contacts = await _database.GetContactsOverviewAsync(SearchText);
-        var filtered = ApplyFilters(contacts);
-        Contacts.Clear();
-        foreach (var contact in filtered)
+        await RunBusyAsync(async () =>
         {
-            Contacts.Add(contact);
-        }
+            StatusMessage = string.Empty;
+            await EnsureClientFiltersAsync();
+            var contacts = await _database.GetContactsOverviewAsync(SearchText);
+            var filtered = ApplyFilters(contacts);
+            Contacts.Clear();
+            foreach (var contact in filtered)
+            {
+                Contacts.Add(contact);
+            }
+        });
     }
 
     private static Task OpenAddAsync()

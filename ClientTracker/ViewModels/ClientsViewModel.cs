@@ -247,55 +247,58 @@ public class ClientsViewModel : ViewModelBase
 
     public async Task LoadAsync()
     {
-        StatusMessage = string.Empty;
-        var clients = await _database.GetClientsAsync(ClientSearch);
-        await EnsureCountryFiltersAsync(clients);
-        var baseIds = clients.Select(c => c.Id).ToList();
-        var sales = await _database.GetSalesForClientIdsAsync(baseIds);
-        var upcomingEnd = DateTime.Today.AddDays(30);
-        var upcomingPayments = await _database.GetPaymentsForClientIdsBetweenAsync(baseIds, DateTime.Today, upcomingEnd);
-        var filteredClients = ApplyActivityFilters(clients, sales, upcomingPayments);
-        var sortedClients = ApplySort(filteredClients, sales, upcomingPayments);
-
-        TotalClients = sortedClients.Count;
-        TotalPages = TotalClients == 0 ? 0 : (int)Math.Ceiling(TotalClients / (double)PageSize);
-        if (CurrentPage >= TotalPages && TotalPages > 0)
+        await RunBusyAsync(async () =>
         {
-            CurrentPage = TotalPages - 1;
-        }
+            StatusMessage = string.Empty;
+            var clients = await _database.GetClientsAsync(ClientSearch);
+            await EnsureCountryFiltersAsync(clients);
+            var baseIds = clients.Select(c => c.Id).ToList();
+            var sales = await _database.GetSalesForClientIdsAsync(baseIds);
+            var upcomingEnd = DateTime.Today.AddDays(30);
+            var upcomingPayments = await _database.GetPaymentsForClientIdsBetweenAsync(baseIds, DateTime.Today, upcomingEnd);
+            var filteredClients = ApplyActivityFilters(clients, sales, upcomingPayments);
+            var sortedClients = ApplySort(filteredClients, sales, upcomingPayments);
 
-        var pageClients = sortedClients
-            .Skip(CurrentPage * PageSize)
-            .Take(PageSize)
-            .ToList();
-
-        TotalSalesCount = sales.Count;
-        TotalSalesAmount = sales.Sum(s => s.Amount);
-        UpcomingCommissionAmount = upcomingPayments.Where(p => !p.IsPaid).Sum(p => p.Commission);
-        ActiveClients = sortedClients.Count(c => sales.Any(s => s.ClientId == c.Id));
-        Clients.Clear();
-        foreach (var client in pageClients)
-        {
-            var clientSales = sales.Where(s => s.ClientId == client.Id).ToList();
-            var totalSalesAmount = clientSales.Sum(s => s.Amount);
-            var upcomingClientPayments = upcomingPayments.Where(p => clientSales.Any(s => s.Id == p.SaleId) && !p.IsPaid).ToList();
-
-            Clients.Add(new ClientListItem
+            TotalClients = sortedClients.Count;
+            TotalPages = TotalClients == 0 ? 0 : (int)Math.Ceiling(TotalClients / (double)PageSize);
+            if (CurrentPage >= TotalPages && TotalPages > 0)
             {
-                Id = client.Id,
-                Name = client.Name,
-                LocationLine = BuildLocationLine(client),
-                TotalSalesCount = clientSales.Count,
-                TotalSalesAmount = totalSalesAmount,
-                UpcomingPaymentCount = upcomingClientPayments.Count,
-                UpcomingCommissionAmount = upcomingClientPayments.Sum(p => p.Commission)
-            });
-        }
+                CurrentPage = TotalPages - 1;
+            }
 
-        if (SelectedClient is not null)
-        {
-            SelectedClient = pageClients.FirstOrDefault(c => c.Id == SelectedClient.Id);
-        }
+            var pageClients = sortedClients
+                .Skip(CurrentPage * PageSize)
+                .Take(PageSize)
+                .ToList();
+
+            TotalSalesCount = sales.Count;
+            TotalSalesAmount = sales.Sum(s => s.Amount);
+            UpcomingCommissionAmount = upcomingPayments.Where(p => !p.IsPaid).Sum(p => p.Commission);
+            ActiveClients = sortedClients.Count(c => sales.Any(s => s.ClientId == c.Id));
+            Clients.Clear();
+            foreach (var client in pageClients)
+            {
+                var clientSales = sales.Where(s => s.ClientId == client.Id).ToList();
+                var totalSalesAmount = clientSales.Sum(s => s.Amount);
+                var upcomingClientPayments = upcomingPayments.Where(p => clientSales.Any(s => s.Id == p.SaleId) && !p.IsPaid).ToList();
+
+                Clients.Add(new ClientListItem
+                {
+                    Id = client.Id,
+                    Name = client.Name,
+                    LocationLine = BuildLocationLine(client),
+                    TotalSalesCount = clientSales.Count,
+                    TotalSalesAmount = totalSalesAmount,
+                    UpcomingPaymentCount = upcomingClientPayments.Count,
+                    UpcomingCommissionAmount = upcomingClientPayments.Sum(p => p.Commission)
+                });
+            }
+
+            if (SelectedClient is not null)
+            {
+                SelectedClient = pageClients.FirstOrDefault(c => c.Id == SelectedClient.Id);
+            }
+        });
     }
 
     private async Task LoadSalesAsync()

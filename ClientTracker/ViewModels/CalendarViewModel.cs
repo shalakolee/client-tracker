@@ -25,8 +25,6 @@ public class CalendarViewModel : ViewModelBase
     private decimal _unpaidCommissionTotal;
     private int _paidPaymentCount;
     private int _unpaidPaymentCount;
-    private bool _isBusy;
-
     private IReadOnlyList<PayDateSummary> _paySummaries = Array.Empty<PayDateSummary>();
     private IReadOnlyList<PaymentScheduleItem> _paymentSchedule = Array.Empty<PaymentScheduleItem>();
     private IReadOnlyList<CalendarDay> _calendarDays = Array.Empty<CalendarDay>();
@@ -173,12 +171,6 @@ public class CalendarViewModel : ViewModelBase
     {
         get => _unpaidPaymentCount;
         set => SetProperty(ref _unpaidPaymentCount, value);
-    }
-
-    public bool IsBusy
-    {
-        get => _isBusy;
-        private set => SetProperty(ref _isBusy, value);
     }
 
     public Command PreviousMonthCommand { get; }

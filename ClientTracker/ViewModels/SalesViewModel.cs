@@ -44,15 +44,18 @@ public class SalesViewModel : ViewModelBase
 
     public async Task LoadAsync()
     {
-        StatusMessage = string.Empty;
-        var sales = await _database.GetSalesOverviewAsync();
-        var filtered = ApplySearch(sales, SearchText);
-
-        Sales.Clear();
-        foreach (var sale in filtered)
+        await RunBusyAsync(async () =>
         {
-            Sales.Add(sale);
-        }
+            StatusMessage = string.Empty;
+            var sales = await _database.GetSalesOverviewAsync();
+            var filtered = ApplySearch(sales, SearchText);
+
+            Sales.Clear();
+            foreach (var sale in filtered)
+            {
+                Sales.Add(sale);
+            }
+        });
     }
 
     private static IEnumerable<SaleOverview> ApplySearch(IEnumerable<SaleOverview> sales, string search)

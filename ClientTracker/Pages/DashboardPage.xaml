@@ -149,6 +149,7 @@
                 </Frame>
             </VerticalStackLayout>
         </ScrollView>
+        <controls:LoadingOverlay Grid.RowSpan="2" ZIndex="99" />
     </Grid>
 </ContentPage>
 

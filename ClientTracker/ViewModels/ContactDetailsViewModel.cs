@@ -114,22 +114,25 @@ public class ContactDetailsViewModel : ViewModelBase
 
     public async Task LoadAsync(int contactId)
     {
-        StatusMessage = string.Empty;
-        var contact = await _database.GetContactByIdAsync(contactId);
-        if (contact is null)
+        await RunBusyAsync(async () =>
         {
-            StatusMessage = "Contact not found.";
-            return;
-        }
+            StatusMessage = string.Empty;
+            var contact = await _database.GetContactByIdAsync(contactId);
+            if (contact is null)
+            {
+                StatusMessage = "Contact not found.";
+                return;
+            }
 
-        ContactId = contact.Id;
-        ContactName = contact.Name;
-        ContactEmail = contact.Email;
-        ContactPhone = contact.Phone;
-        Notes = contact.Notes;
+            ContactId = contact.Id;
+            ContactName = contact.Name;
+            ContactEmail = contact.Email;
+            ContactPhone = contact.Phone;
+            Notes = contact.Notes;
 
-        var client = await _database.GetClientByIdAsync(contact.ClientId);
-        ClientName = client?.Name ?? string.Empty;
+            var client = await _database.GetClientByIdAsync(contact.ClientId);
+            ClientName = client?.Name ?? string.Empty;
+        });
     }
 
     private Task EditAsync()

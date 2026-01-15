@@ -83,49 +83,52 @@ public class ContactEditViewModel : ViewModelBase
 
     public async Task LoadAsync(int? contactId = null, int? clientId = null)
     {
-        StatusMessage = string.Empty;
-        _lockedClientId = 0;
-        var clients = await _database.GetClientsAsync();
-        Clients.Clear();
-        foreach (var client in clients)
+        await RunBusyAsync(async () =>
         {
-            Clients.Add(client);
-        }
-
-        if (contactId.HasValue && contactId.Value > 0)
-        {
-            var contact = await _database.GetContactByIdAsync(contactId.Value);
-            if (contact is null)
+            StatusMessage = string.Empty;
+            _lockedClientId = 0;
+            var clients = await _database.GetClientsAsync();
+            Clients.Clear();
+            foreach (var client in clients)
             {
-                StatusMessage = "Contact not found.";
-                return;
+                Clients.Add(client);
             }
 
-            ContactId = contact.Id;
-            _lockedClientId = contact.ClientId;
-            Name = contact.Name;
-            Email = contact.Email;
-            Phone = contact.Phone;
-            Notes = contact.Notes;
-            SelectedClient = Clients.FirstOrDefault(c => c.Id == contact.ClientId);
-        }
-        else
-        {
-            ContactId = 0;
-            _lockedClientId = 0;
-            Name = string.Empty;
-            Email = string.Empty;
-            Phone = string.Empty;
-            Notes = string.Empty;
-            if (clientId.HasValue && clientId.Value > 0)
+            if (contactId.HasValue && contactId.Value > 0)
             {
-                SelectedClient = Clients.FirstOrDefault(c => c.Id == clientId.Value) ?? Clients.FirstOrDefault();
+                var contact = await _database.GetContactByIdAsync(contactId.Value);
+                if (contact is null)
+                {
+                    StatusMessage = "Contact not found.";
+                    return;
+                }
+
+                ContactId = contact.Id;
+                _lockedClientId = contact.ClientId;
+                Name = contact.Name;
+                Email = contact.Email;
+                Phone = contact.Phone;
+                Notes = contact.Notes;
+                SelectedClient = Clients.FirstOrDefault(c => c.Id == contact.ClientId);
             }
             else
             {
-                SelectedClient = Clients.FirstOrDefault();
+                ContactId = 0;
+                _lockedClientId = 0;
+                Name = string.Empty;
+                Email = string.Empty;
+                Phone = string.Empty;
+                Notes = string.Empty;
+                if (clientId.HasValue && clientId.Value > 0)
+                {
+                    SelectedClient = Clients.FirstOrDefault(c => c.Id == clientId.Value) ?? Clients.FirstOrDefault();
+                }
+                else
+                {
+                    SelectedClient = Clients.FirstOrDefault();
+                }
             }
-        }
+        });
     }
 
     private async Task SaveAsync()

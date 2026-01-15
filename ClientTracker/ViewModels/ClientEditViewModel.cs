@@ -241,46 +241,49 @@ public class ClientEditViewModel : ViewModelBase
 
     public async Task LoadAsync(int clientId)
     {
-        StatusMessage = string.Empty;
-        if (clientId <= 0)
+        await RunBusyAsync(async () =>
         {
-            ClientId = 0;
-            ClientName = string.Empty;
-            AddressLine1 = string.Empty;
-            AddressLine2 = string.Empty;
-            City = string.Empty;
-            StateProvince = string.Empty;
-            PostalCode = string.Empty;
-            Country = string.Empty;
-            TaxId = string.Empty;
-            Contacts.Clear();
-            Sales.Clear();
-            PageTitle = LocalizationResourceManager.Instance["Title_ClientNew"];
+            StatusMessage = string.Empty;
+            if (clientId <= 0)
+            {
+                ClientId = 0;
+                ClientName = string.Empty;
+                AddressLine1 = string.Empty;
+                AddressLine2 = string.Empty;
+                City = string.Empty;
+                StateProvince = string.Empty;
+                PostalCode = string.Empty;
+                Country = string.Empty;
+                TaxId = string.Empty;
+                Contacts.Clear();
+                Sales.Clear();
+                PageTitle = LocalizationResourceManager.Instance["Title_ClientNew"];
+                OnPropertyChanged(nameof(IsExistingClient));
+                return;
+            }
+
+            var client = await _database.GetClientByIdAsync(clientId);
+            if (client is null)
+            {
+                StatusMessage = "Client not found.";
+                return;
+            }
+
+            ClientId = client.Id;
+            ClientName = client.Name;
+            AddressLine1 = client.AddressLine1;
+            AddressLine2 = client.AddressLine2;
+            City = client.City;
+            StateProvince = client.StateProvince;
+            PostalCode = client.PostalCode;
+            Country = client.Country;
+            TaxId = client.TaxId;
+            PageTitle = LocalizationResourceManager.Instance["Title_ClientEdit"];
             OnPropertyChanged(nameof(IsExistingClient));
-            return;
-        }
 
-        var client = await _database.GetClientByIdAsync(clientId);
-        if (client is null)
-        {
-            StatusMessage = "Client not found.";
-            return;
-        }
-
-        ClientId = client.Id;
-        ClientName = client.Name;
-        AddressLine1 = client.AddressLine1;
-        AddressLine2 = client.AddressLine2;
-        City = client.City;
-        StateProvince = client.StateProvince;
-        PostalCode = client.PostalCode;
-        Country = client.Country;
-        TaxId = client.TaxId;
-        PageTitle = LocalizationResourceManager.Instance["Title_ClientEdit"];
-        OnPropertyChanged(nameof(IsExistingClient));
-
-        await LoadContactsAsync();
-        await LoadSalesAsync();
+            await LoadContactsAsync();
+            await LoadSalesAsync();
+        });
     }
 
     private async Task SaveClientAsync()

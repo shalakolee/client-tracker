@@ -41,8 +41,6 @@ public class SettingsViewModel : ViewModelBase
         RefreshDiagnosticsCommand = new Command(async () => await RefreshDiagnosticsAsync());
         SaveDatabaseConnectionCommand = new Command(async () => await SaveDatabaseConnectionAsync());
         TestDatabaseConnectionCommand = new Command(async () => await TestDatabaseConnectionAsync());
-        SyncFromRemoteDatabaseCommand = new Command(async () => await SyncFromRemoteDatabaseAsync());
-        PushLocalToRemoteDatabaseCommand = new Command(async () => await PushLocalToRemoteDatabaseAsync());
         CheckUpdatesCommand = new Command(async () => await _updateService.CheckForUpdatesAsync(true));
         LoadUpdateSettings();
         _ = LoadDatabaseConnectionAsync();
@@ -62,8 +60,6 @@ public class SettingsViewModel : ViewModelBase
     public Command RefreshDiagnosticsCommand { get; }
     public Command SaveDatabaseConnectionCommand { get; }
     public Command TestDatabaseConnectionCommand { get; }
-    public Command SyncFromRemoteDatabaseCommand { get; }
-    public Command PushLocalToRemoteDatabaseCommand { get; }
     public Command CheckUpdatesCommand { get; }
 
     public string DatabasePath
@@ -228,47 +224,6 @@ public class SettingsViewModel : ViewModelBase
             ? LocalizationResourceManager.Instance["Settings_DbConnectionOk"]
             : LocalizationResourceManager.Instance["Settings_DbConnectionFailed"];
         await Shell.Current.DisplayAlertAsync(title, message, LocalizationResourceManager.Instance["Action_OK"]);
-    }
-
-    private async Task SyncFromRemoteDatabaseAsync()
-    {
-        var confirm = await Shell.Current.DisplayAlertAsync(
-            LocalizationResourceManager.Instance["Title_Settings"],
-            LocalizationResourceManager.Instance["Settings_DbSyncFromRemoteConfirm"],
-            LocalizationResourceManager.Instance["Action_Continue"],
-            LocalizationResourceManager.Instance["Action_Cancel"]);
-
-        if (!confirm)
-        {
-            return;
-        }
-
-        await _database.SyncFromRemoteMySqlAsync(replaceLocal: true);
-        await RefreshDiagnosticsAsync();
-        await Shell.Current.DisplayAlertAsync(
-            LocalizationResourceManager.Instance["Title_Settings"],
-            LocalizationResourceManager.Instance["Settings_DbSyncComplete"],
-            LocalizationResourceManager.Instance["Action_OK"]);
-    }
-
-    private async Task PushLocalToRemoteDatabaseAsync()
-    {
-        var confirm = await Shell.Current.DisplayAlertAsync(
-            LocalizationResourceManager.Instance["Title_Settings"],
-            LocalizationResourceManager.Instance["Settings_DbPushToRemoteConfirm"],
-            LocalizationResourceManager.Instance["Action_Continue"],
-            LocalizationResourceManager.Instance["Action_Cancel"]);
-
-        if (!confirm)
-        {
-            return;
-        }
-
-        await _database.PushLocalDataToRemoteMySqlAsync(overwriteRemote: true);
-        await Shell.Current.DisplayAlertAsync(
-            LocalizationResourceManager.Instance["Title_Settings"],
-            LocalizationResourceManager.Instance["Settings_DbPushComplete"],
-            LocalizationResourceManager.Instance["Action_OK"]);
     }
 
     private void LoadUpdateSettings()
