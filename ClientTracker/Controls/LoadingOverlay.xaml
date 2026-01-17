@@ -5,12 +5,12 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     IsVisible="{Binding IsBusy}"
     InputTransparent="False">
-    <Grid BackgroundColor="{AppThemeBinding Light=#66FFFFFF, Dark=#66000000}">
+    <Grid>
+        <BoxView BackgroundColor="#FFFFFF" Opacity="0.92" />
         <ActivityIndicator
             IsRunning="True"
-            Color="{StaticResource Primary}"
-            WidthRequest="44"
-            HeightRequest="44"
+            WidthRequest="36"
+            HeightRequest="36"
             HorizontalOptions="Center"
             VerticalOptions="Center" />
     </Grid>

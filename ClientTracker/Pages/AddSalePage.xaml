@@ -12,7 +12,7 @@
     </ContentPage.Background>
 
     <Grid RowDefinitions="Auto,*">
-        <controls:TopBar
+        <controls:TopBar NavigationMode="Back"
             Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Title_AddSale]}"
             Subtitle="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Sales_Subtitle]}">
             <controls:TopBar.RightContent>
@@ -23,17 +23,47 @@
         <ScrollView Grid.Row="1">
             <VerticalStackLayout Padding="{StaticResource PagePadding}" Spacing="16">
             <Frame Style="{StaticResource CardFrame}">
-                <VerticalStackLayout Spacing="10">
+                <VerticalStackLayout Spacing="12">
                     <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Sale_Editor]}" Style="{StaticResource SectionTitle}" />
                     <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
-                        <Picker Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Title_Clients]}" ItemsSource="{Binding Clients}" ItemDisplayBinding="{Binding Name}" SelectedItem="{Binding SelectedClient}" />
-                        <Picker Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Sale_Contact]}" ItemsSource="{Binding Contacts}" ItemDisplayBinding="{Binding Name}" SelectedItem="{Binding SelectedContact}" Grid.Column="1" />
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Title_Clients]}" Style="{StaticResource MutedLabel}" />
+                            <Border Style="{StaticResource FormFieldContainer}">
+                                <Picker ItemsSource="{Binding Clients}" ItemDisplayBinding="{Binding Name}" SelectedItem="{Binding SelectedClient}" Style="{StaticResource FormFieldPicker}" />
+                            </Border>
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Grid.Column="1" Spacing="6">
+                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Sale_Contact]}" Style="{StaticResource MutedLabel}" />
+                            <Border Style="{StaticResource FormFieldContainer}">
+                                <Picker ItemsSource="{Binding Contacts}" ItemDisplayBinding="{Binding Name}" SelectedItem="{Binding SelectedContact}" Style="{StaticResource FormFieldPicker}" />
+                            </Border>
+                        </VerticalStackLayout>
                     </Grid>
-                    <Entry Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Sale_InvoicePlaceholder]}" Text="{Binding InvoiceNumber}" />
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Sale_InvoicePlaceholder]}" Style="{StaticResource MutedLabel}" />
+                        <Border Style="{StaticResource FormFieldContainer}">
+                            <Entry Text="{Binding InvoiceNumber}" Style="{StaticResource FormFieldEntry}" />
+                        </Border>
+                    </VerticalStackLayout>
                     <Grid ColumnDefinitions="*,*,*" ColumnSpacing="12">
-                        <DatePicker Date="{Binding SaleDate}" />
-                        <Entry Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Sale_AmountPlaceholder]}" Keyboard="Numeric" Text="{Binding Amount}" Grid.Column="1" />
-                        <Entry Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Sale_CommissionPlaceholder]}" Keyboard="Numeric" Text="{Binding CommissionPercent}" Grid.Column="2" />
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Sale_Date]}" Style="{StaticResource MutedLabel}" />
+                            <Border Style="{StaticResource FormFieldContainer}">
+                                <DatePicker Date="{Binding SaleDate}" Style="{StaticResource FormFieldDatePicker}" />
+                            </Border>
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Grid.Column="1" Spacing="6">
+                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Sale_AmountPlaceholder]}" Style="{StaticResource MutedLabel}" />
+                            <Border Style="{StaticResource FormFieldContainer}">
+                                <Entry Keyboard="Numeric" Text="{Binding Amount}" Style="{StaticResource FormFieldEntry}" />
+                            </Border>
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Grid.Column="2" Spacing="6">
+                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Sale_CommissionPlaceholder]}" Style="{StaticResource MutedLabel}" />
+                            <Border Style="{StaticResource FormFieldContainer}">
+                                <Entry Keyboard="Numeric" Text="{Binding CommissionPercent}" Style="{StaticResource FormFieldEntry}" />
+                            </Border>
+                        </VerticalStackLayout>
                     </Grid>
                 </VerticalStackLayout>
             </Frame>
@@ -44,5 +74,7 @@
         <controls:LoadingOverlay Grid.RowSpan="2" ZIndex="99" />
     </Grid>
 </ContentPage>
+
+
 
 

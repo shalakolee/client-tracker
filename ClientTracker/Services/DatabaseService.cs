@@ -2,6 +2,8 @@ using System.Linq;
 using ClientTracker.Models;
 using ContactModel = ClientTracker.Models.Contact;
 using MySqlConnector;
+using Microsoft.Maui.Devices;
+using Microsoft.Maui.Storage;
 using SQLite;
 using SQLitePCL;
 
@@ -32,6 +34,11 @@ public class DatabaseService
 
     private static string GetProjectDatabasePath()
     {
+        if (DeviceInfo.Platform == DevicePlatform.Android || DeviceInfo.Platform == DevicePlatform.iOS)
+        {
+            return Path.Combine(FileSystem.AppDataDirectory, "client-tracker.db3");
+        }
+
         var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
         var dataDir = Path.Combine(projectRoot, "data");
         Directory.CreateDirectory(dataDir);

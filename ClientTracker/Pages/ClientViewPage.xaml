@@ -8,270 +8,181 @@
     xmlns:services="clr-namespace:ClientTracker.Services"
     Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Title_Client]}">
 
-        <ContentPage.Background>
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <services:InitialsConverter x:Key="InitialsConverter" />
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <ContentPage.Background>
         <AppThemeBinding Light="{StaticResource AppBackgroundBrush}" Dark="{StaticResource AppBackgroundDarkBrush}" />
     </ContentPage.Background>
 
     <Grid RowDefinitions="Auto,*">
-        <controls:TopBar Title="{Binding ClientName}" Subtitle="{Binding LocationLine}">
+        <controls:TopBar NavigationMode="Back" Title="{Binding ClientName}" Subtitle="{Binding LocationLine}">
             <controls:TopBar.RightContent>
                 <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
-                    <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Add]}" Command="{Binding AddContactCommand}" Style="{StaticResource BaseButton}" />
-                    <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_AddSale]}" Command="{Binding AddSaleCommand}" Style="{StaticResource BaseButton}" />
-                    <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Edit]}" Command="{Binding EditCommand}" Style="{StaticResource SecondaryButton}" />
-                    <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Delete]}" Command="{Binding DeleteCommand}" Style="{StaticResource DangerButton}" />
+                    <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_AddSale]}" Command="{Binding AddSaleCommand}" Style="{StaticResource InlineButton}" />
+                    <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Edit]}" Command="{Binding EditCommand}" Style="{StaticResource InlineButton}" />
+                    <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Delete]}" Command="{Binding DeleteCommand}" Style="{StaticResource InlineDangerButton}" />
                 </HorizontalStackLayout>
             </controls:TopBar.RightContent>
         </controls:TopBar>
 
-        <ScrollView Grid.Row="1">
-            <VerticalStackLayout Padding="{StaticResource PagePadding}" Spacing="16">
-                <Frame Style="{StaticResource CardFrame}">
-                    <VerticalStackLayout Spacing="10">
-                        <Label Text="{Binding AddressLine1}" FontAttributes="Bold" />
-                        <Label Text="{Binding AddressLine2}" Style="{StaticResource MutedLabel}" />
-                        <HorizontalStackLayout Spacing="10">
-                            <Border BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAlt}, Dark={StaticResource Gray900}}" StrokeThickness="0" Padding="10,6">
-                                <Border.StrokeShape>
-                                    <RoundRectangle CornerRadius="999" />
-                                </Border.StrokeShape>
-                                <Label>
-                                    <Label.FormattedText>
-                                        <FormattedString>
-                                            <Span Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Client_TaxId]}" />
-                                            <Span Text=": " />
-                                            <Span Text="{Binding TaxId}" FontAttributes="Bold" />
-                                        </FormattedString>
-                                    </Label.FormattedText>
-                                </Label>
-                            </Border>
-                        </HorizontalStackLayout>
+        <RefreshView Grid.Row="1" Command="{Binding RefreshCommand}" IsRefreshing="{Binding IsBusy}">
+            <ScrollView>
+                <VerticalStackLayout Padding="{StaticResource PagePadding}" Spacing="18">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                    <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Title_Client]}" Style="{StaticResource SectionTitle}" />
+                    <Button Grid.Column="1"
+                            Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Edit]}"
+                            Command="{Binding EditCommand}"
+                            Style="{StaticResource InlineButton}" />
+                </Grid>
+                <Border BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource Gray950}}" StrokeThickness="0" Padding="16">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="18" />
+                    </Border.StrokeShape>
+                    <VerticalStackLayout Spacing="14">
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="{Binding ClientName}" FontAttributes="Bold" FontSize="18" />
+                            <Label Text="{Binding LocationLine}" Style="{StaticResource MutedLabel}" />
+                        </VerticalStackLayout>
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Client_Address]}" Style="{StaticResource MutedLabel}" />
+                                <Label Text="{Binding AddressLine1}" FontAttributes="Bold" LineBreakMode="TailTruncation" MaxLines="1" />
+                                <Label Text="{Binding AddressLine2}" Style="{StaticResource MutedLabel}" LineBreakMode="TailTruncation" MaxLines="1" />
+                            </VerticalStackLayout>
+                            <VerticalStackLayout Grid.Column="1" Spacing="4" HorizontalOptions="End">
+                                <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Client_TaxId]}" Style="{StaticResource MutedLabel}" HorizontalTextAlignment="End" />
+                                <Label Text="{Binding TaxId}" FontAttributes="Bold" HorizontalTextAlignment="End" LineBreakMode="TailTruncation" MaxLines="1" />
+                            </VerticalStackLayout>
+                        </Grid>
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Client_CityStatePostal]}" Style="{StaticResource MutedLabel}" />
+                                <Label Text="{Binding CityStatePostalLine}" LineBreakMode="TailTruncation" MaxLines="1" />
+                            </VerticalStackLayout>
+                            <VerticalStackLayout Grid.Column="1" Spacing="4" HorizontalOptions="End">
+                                <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Client_Country]}" Style="{StaticResource MutedLabel}" HorizontalTextAlignment="End" />
+                                <Label Text="{Binding Country}" HorizontalTextAlignment="End" LineBreakMode="TailTruncation" MaxLines="1" />
+                            </VerticalStackLayout>
+                        </Grid>
                     </VerticalStackLayout>
-                </Frame>
+                </Border>
 
-                <FlexLayout Wrap="Wrap" JustifyContent="SpaceBetween" AlignItems="Stretch">
-                    <Border Padding="16" StrokeThickness="0" Margin="0,0,0,12" FlexLayout.Basis="48%">
-                        <Border.Background>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                <GradientStop Color="#E0F2FE" Offset="0" />
-                                <GradientStop Color="#EEF2FF" Offset="1" />
-                            </LinearGradientBrush>
-                        </Border.Background>
-                        <Border.StrokeShape>
-                            <RoundRectangle CornerRadius="18" />
-                        </Border.StrokeShape>
-                        <VerticalStackLayout Spacing="6">
+                <Border BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource Gray950}}" StrokeThickness="0">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="18" />
+                    </Border.StrokeShape>
+                    <VerticalStackLayout>
+                        <Grid Padding="16,12" ColumnDefinitions="*,Auto">
                             <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Dashboard_TotalSales]}" Style="{StaticResource MutedLabel}" />
-                            <Label Text="{Binding SaleCount}" FontSize="28" FontAttributes="Bold" />
-                        </VerticalStackLayout>
-                    </Border>
-
-                    <Border Padding="16" StrokeThickness="0" Margin="0,0,0,12" FlexLayout.Basis="48%">
-                        <Border.Background>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                <GradientStop Color="#ECFDF5" Offset="0" />
-                                <GradientStop Color="#E0F2FE" Offset="1" />
-                            </LinearGradientBrush>
-                        </Border.Background>
-                        <Border.StrokeShape>
-                            <RoundRectangle CornerRadius="18" />
-                        </Border.StrokeShape>
-                        <VerticalStackLayout Spacing="6">
+                            <Label Grid.Column="1" Text="{Binding SaleCount}" FontAttributes="Bold" />
+                        </Grid>
+                        <BoxView HeightRequest="1" BackgroundColor="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource Gray600}}" Margin="16,0" />
+                        <Grid Padding="16,12" ColumnDefinitions="*,Auto">
                             <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Sales_Column_Amount]}" Style="{StaticResource MutedLabel}" />
-                            <Label Text="{Binding TotalSaleAmount, StringFormat='{0:C}'}" FontSize="24" FontAttributes="Bold" />
-                        </VerticalStackLayout>
-                    </Border>
-
-                    <Border Padding="16" StrokeThickness="0" Margin="0,0,0,12" FlexLayout.Basis="48%">
-                        <Border.Background>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                <GradientStop Color="#FFF7ED" Offset="0" />
-                                <GradientStop Color="#FEF3C7" Offset="1" />
-                            </LinearGradientBrush>
-                        </Border.Background>
-                        <Border.StrokeShape>
-                            <RoundRectangle CornerRadius="18" />
-                        </Border.StrokeShape>
-                        <VerticalStackLayout Spacing="6">
-                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[PayCalendar_Commission]}" Style="{StaticResource MutedLabel}" />
-                            <Label Text="{Binding TotalCommissionAmount, StringFormat='{0:C}'}" FontSize="24" FontAttributes="Bold" />
-                        </VerticalStackLayout>
-                    </Border>
-
-                    <Border Padding="16" StrokeThickness="0" Margin="0,0,0,12" FlexLayout.Basis="48%">
-                        <Border.Background>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                <GradientStop Color="#FCE7F3" Offset="0" />
-                                <GradientStop Color="#EEF2FF" Offset="1" />
-                            </LinearGradientBrush>
-                        </Border.Background>
-                        <Border.StrokeShape>
-                            <RoundRectangle CornerRadius="18" />
-                        </Border.StrokeShape>
-                        <VerticalStackLayout Spacing="6">
+                            <Label Grid.Column="1" Text="{Binding TotalSaleAmount, StringFormat='{0:C}'}" FontAttributes="Bold" />
+                        </Grid>
+                        <BoxView HeightRequest="1" BackgroundColor="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource Gray600}}" Margin="16,0" />
+                        <Grid Padding="16,12" ColumnDefinitions="*,Auto">
                             <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Client_OutstandingCommission]}" Style="{StaticResource MutedLabel}" />
-                            <Label Text="{Binding OutstandingCommissionAmount, StringFormat='{0:C}'}" FontSize="24" FontAttributes="Bold" />
-                        </VerticalStackLayout>
-                    </Border>
-                </FlexLayout>
-
-            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="16" RowSpacing="16">
-                <Frame Style="{StaticResource CardFrame}" Grid.ColumnSpan="{OnIdiom Phone=2, Default=1}">
-                    <VerticalStackLayout Spacing="10">
-                        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
-                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Client_Contacts]}" Style="{StaticResource SectionTitle}" />
-                            <Label Text="{Binding Contacts.Count, StringFormat='{0}'}" Style="{StaticResource MutedLabel}" Grid.Column="1" VerticalTextAlignment="Center" HorizontalTextAlignment="End" />
-                            <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Add]}" Command="{Binding AddContactCommand}" Grid.Column="2" Style="{StaticResource BaseButton}" />
+                            <Label Grid.Column="1" Text="{Binding OutstandingCommissionAmount, StringFormat='{0:C}'}" FontAttributes="Bold" />
                         </Grid>
-                        <CollectionView ItemsSource="{Binding Contacts}" SelectionMode="None">
-                            <CollectionView.ItemsLayout>
-                                <LinearItemsLayout Orientation="Vertical" ItemSpacing="10" />
-                            </CollectionView.ItemsLayout>
-                            <CollectionView.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Stroke="{StaticResource BorderSubtle}" StrokeThickness="1" BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource Gray950}}">
-                                        <Border.StrokeShape>
-                                            <RoundRectangle CornerRadius="14" />
-                                        </Border.StrokeShape>
-                                        <Border.GestureRecognizers>
+                    </VerticalStackLayout>
+                </Border>
+
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                    <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Client_Contacts]}" Style="{StaticResource SectionTitle}" />
+                    <Button Grid.Column="1" Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Add]}" Command="{Binding AddContactCommand}" Style="{StaticResource InlineButton}" />
+                </Grid>
+                <Border BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource Gray950}}" StrokeThickness="0">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="18" />
+                    </Border.StrokeShape>
+                    <CollectionView ItemsSource="{Binding Contacts}" SelectionMode="None">
+                        <CollectionView.ItemsLayout>
+                            <LinearItemsLayout Orientation="Vertical" ItemSpacing="0" />
+                        </CollectionView.ItemsLayout>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <Grid RowDefinitions="Auto,1">
+                                    <Grid Padding="16,12" ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="4" MinimumHeightRequest="72">
+                                        <Grid.GestureRecognizers>
                                             <TapGestureRecognizer Command="{Binding BindingContext.ViewContactCommand, Source={x:Reference ClientViewPageRoot}}" CommandParameter="{Binding .}" />
-                                        </Border.GestureRecognizers>
-                                        <VisualStateManager.VisualStateGroups>
-                                            <VisualStateGroupList>
-                                                <VisualStateGroup x:Name="CommonStates">
-                                                    <VisualState x:Name="Normal" />
-                                                    <VisualState x:Name="PointerOver">
-                                                        <VisualState.Setters>
-                                                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource SurfaceAlt}, Dark={StaticResource Gray900}}" />
-                                                        </VisualState.Setters>
-                                                    </VisualState>
-                                                </VisualStateGroup>
-                                            </VisualStateGroupList>
-                                        </VisualStateManager.VisualStateGroups>
-                                        <Grid Padding="14" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
-                                            <Border WidthRequest="34" HeightRequest="34" BackgroundColor="{StaticResource Primary}" StrokeThickness="0" VerticalOptions="Start">
-                                                <Border.StrokeShape>
-                                                    <RoundRectangle CornerRadius="999" />
-                                                </Border.StrokeShape>
-                                                <Image Source="{OnPlatform WinUI=avatar_win.png, Default=avatar}" WidthRequest="16" HeightRequest="16" HorizontalOptions="Center" VerticalOptions="Center" Opacity="0.95" />
-                                            </Border>
+                                        </Grid.GestureRecognizers>
+                                        <Border WidthRequest="40" HeightRequest="40" BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAlt}, Dark={StaticResource Gray900}}" StrokeThickness="0" VerticalOptions="Center" Grid.RowSpan="2">
+                                            <Border.StrokeShape>
+                                                <RoundRectangle CornerRadius="20" />
+                                            </Border.StrokeShape>
+                                            <Label Text="{Binding Name, Converter={StaticResource InitialsConverter}}" FontAttributes="Bold" FontSize="14" HorizontalOptions="Center" VerticalOptions="Center" />
+                                        </Border>
 
-                                            <VerticalStackLayout Grid.Column="1" Spacing="6">
-                                                <VerticalStackLayout Spacing="2">
-                                                    <Label Text="{Binding Name}" FontAttributes="Bold" FontSize="16" />
-                                                    <Label Text="{Binding Email}" Style="{StaticResource MutedLabel}" LineBreakMode="TailTruncation" />
-                                                </VerticalStackLayout>
-                                                <Label Text="{Binding Notes}" Style="{StaticResource MutedLabel}" LineBreakMode="TailTruncation" MaxLines="2" />
-                                            </VerticalStackLayout>
+                                        <Label Grid.Column="1" Text="{Binding Name}" FontAttributes="Bold" FontSize="16" LineBreakMode="TailTruncation" MaxLines="1" />
+                                        <Label Grid.Column="1" Grid.Row="1" Text="{Binding Email}" Style="{StaticResource MutedLabel}" LineBreakMode="TailTruncation" MaxLines="1" />
 
-                                            <VerticalStackLayout Grid.Column="2" Spacing="6" HorizontalOptions="End">
-                                                <Label Text="{Binding Phone}" Style="{StaticResource MutedLabel}" HorizontalTextAlignment="End" />
-                                                <Button
-                                                    Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Edit]}"
-                                                    Command="{Binding BindingContext.EditContactCommand, Source={x:Reference ClientViewPageRoot}}"
-                                                    CommandParameter="{Binding .}"
-                                                    Style="{StaticResource InlineButton}"
-                                                    HorizontalOptions="End" />
-                                            </VerticalStackLayout>
-                                        </Grid>
-                                    </Border>
-                                </DataTemplate>
-                            </CollectionView.ItemTemplate>
-                        </CollectionView>
-                    </VerticalStackLayout>
-                </Frame>
+                                        <Image Grid.Column="2"
+                                               Grid.RowSpan="2"
+                                               Source="icon_chevron_right"
+                                               WidthRequest="18"
+                                               HeightRequest="18"
+                                               Opacity="0.6"
+                                               VerticalOptions="Center" />
+                                    </Grid>
+                                    <BoxView Grid.Row="1" HeightRequest="1" BackgroundColor="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource Gray600}}" Margin="72,0,16,0" />
+                                </Grid>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </Border>
 
-                <Frame Style="{StaticResource CardFrame}"
-                       Grid.Column="{OnIdiom Phone=0, Default=1}"
-                       Grid.Row="{OnIdiom Phone=1, Default=0}"
-                       Grid.ColumnSpan="{OnIdiom Phone=2, Default=1}">
-                    <VerticalStackLayout Spacing="10">
-                        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
-                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Client_Sales]}" Style="{StaticResource SectionTitle}" />
-                            <Label Text="{Binding Sales.Count, StringFormat='{0}'}" Style="{StaticResource MutedLabel}" Grid.Column="1" VerticalTextAlignment="Center" HorizontalTextAlignment="End" />
-                            <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_AddSale]}" Command="{Binding AddSaleCommand}" Grid.Column="2" Style="{StaticResource BaseButton}" />
-                        </Grid>
-                        <CollectionView ItemsSource="{Binding Sales}">
-                            <CollectionView.ItemsLayout>
-                                <LinearItemsLayout Orientation="Vertical" ItemSpacing="10" />
-                            </CollectionView.ItemsLayout>
-                            <CollectionView.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Stroke="{StaticResource BorderSubtle}" StrokeThickness="1" BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource Gray950}}">
-                                        <Border.StrokeShape>
-                                            <RoundRectangle CornerRadius="12" />
-                                        </Border.StrokeShape>
-                                        <Border.GestureRecognizers>
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                    <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Client_Sales]}" Style="{StaticResource SectionTitle}" />
+                    <Button Grid.Column="1" Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_AddSale]}" Command="{Binding AddSaleCommand}" Style="{StaticResource InlineButton}" />
+                </Grid>
+                <Border BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource Gray950}}" StrokeThickness="0">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="18" />
+                    </Border.StrokeShape>
+                    <CollectionView ItemsSource="{Binding Sales}" SelectionMode="None">
+                        <CollectionView.ItemsLayout>
+                            <LinearItemsLayout Orientation="Vertical" ItemSpacing="0" />
+                        </CollectionView.ItemsLayout>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <Grid RowDefinitions="Auto,1">
+                                    <Grid Padding="16,12" ColumnDefinitions="*,Auto,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="4" MinimumHeightRequest="72">
+                                        <Grid.GestureRecognizers>
                                             <TapGestureRecognizer Command="{Binding BindingContext.ViewSaleCommand, Source={x:Reference ClientViewPageRoot}}" CommandParameter="{Binding .}" />
-                                        </Border.GestureRecognizers>
-                                        <VisualStateManager.VisualStateGroups>
-                                            <VisualStateGroupList>
-                                                <VisualStateGroup x:Name="CommonStates">
-                                                    <VisualState x:Name="Normal" />
-                                                    <VisualState x:Name="PointerOver">
-                                                        <VisualState.Setters>
-                                                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource SurfaceAlt}, Dark={StaticResource Gray900}}" />
-                                                        </VisualState.Setters>
-                                                    </VisualState>
-                                                </VisualStateGroup>
-                                            </VisualStateGroupList>
-                                        </VisualStateManager.VisualStateGroups>
-                                        <Grid Padding="14" ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                                            <VerticalStackLayout Spacing="8">
-                                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                                                    <Border BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAlt}, Dark={StaticResource Gray900}}" StrokeThickness="0" Padding="10,6">
-                                                        <Border.StrokeShape>
-                                                            <RoundRectangle CornerRadius="999" />
-                                                        </Border.StrokeShape>
-                                                        <Label Text="{Binding SaleDate, StringFormat='{0:d}'}" Style="{StaticResource MutedLabel}" />
-                                                    </Border>
-                                                    <VerticalStackLayout Grid.Column="1" Spacing="2">
-                                                        <Label Text="{Binding ContactName}" FontAttributes="Bold" />
-                                                        <Label Text="{Binding InvoiceNumber, StringFormat='Invoice #{0}'}" Style="{StaticResource MutedLabel}" LineBreakMode="TailTruncation" />
-                                                    </VerticalStackLayout>
-                                                </Grid>
+                                        </Grid.GestureRecognizers>
+                                        <Label Text="{Binding InvoiceNumber, StringFormat='Invoice {0}'}" FontAttributes="Bold" FontSize="16" LineBreakMode="TailTruncation" MaxLines="1" />
+                                        <Label Grid.Row="1" Text="{Binding ContactName}" Style="{StaticResource MutedLabel}" LineBreakMode="TailTruncation" MaxLines="1" />
 
-                                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                                                    <Label Text="{Binding Amount, StringFormat='{0:C}'}" FontAttributes="Bold" />
-                                                    <Grid Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                                                        <ProgressBar Progress="{Binding PaymentProgress}" />
-                                                        <Border Grid.Column="1" BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAlt}, Dark={StaticResource Gray900}}" StrokeThickness="0" Padding="10,6">
-                                                            <Border.StrokeShape>
-                                                                <RoundRectangle CornerRadius="999" />
-                                                            </Border.StrokeShape>
-                                                            <Label Style="{StaticResource MutedLabel}">
-                                                                <Label.FormattedText>
-                                                                    <FormattedString>
-                                                                        <Span Text="{Binding PaidPaymentCount}" FontAttributes="Bold" />
-                                                                        <Span Text="/" />
-                                                                        <Span Text="{Binding TotalPaymentCount}" />
-                                                                    </FormattedString>
-                                                                </Label.FormattedText>
-                                                            </Label>
-                                                        </Border>
-                                                    </Grid>
-                                                </Grid>
-                                            </VerticalStackLayout>
+                                        <VerticalStackLayout Grid.Column="1" Grid.RowSpan="2" Spacing="2" HorizontalOptions="End" VerticalOptions="Center">
+                                            <Label Text="{Binding Amount, StringFormat='{0:C}'}" FontAttributes="Bold" HorizontalTextAlignment="End" />
+                                            <Label Text="{Binding SaleDate, StringFormat='{0:d}'}" Style="{StaticResource MutedLabel}" HorizontalTextAlignment="End" />
+                                        </VerticalStackLayout>
+                                        <Image Grid.Column="2"
+                                               Grid.RowSpan="2"
+                                               Source="icon_chevron_right"
+                                               WidthRequest="18"
+                                               HeightRequest="18"
+                                               Opacity="0.6"
+                                               VerticalOptions="Center" />
+                                    </Grid>
+                                    <BoxView Grid.Row="1" HeightRequest="1" BackgroundColor="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource Gray600}}" Margin="16,0" />
+                                </Grid>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </Border>
 
-                                            <Button
-                                                Grid.Column="1"
-                                                Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Edit]}"
-                                                Command="{Binding BindingContext.EditSaleCommand, Source={x:Reference ClientViewPageRoot}}"
-                                                CommandParameter="{Binding .}"
-                                                Style="{StaticResource InlineButton}"
-                                                VerticalOptions="Start" />
-                                        </Grid>
-                                    </Border>
-                                </DataTemplate>
-                            </CollectionView.ItemTemplate>
-                        </CollectionView>
-                    </VerticalStackLayout>
-                </Frame>
-            </Grid>
-
-            <Label Text="{Binding StatusMessage}" TextColor="{StaticResource Tertiary}" />
-            </VerticalStackLayout>
-        </ScrollView>
+                <Label Text="{Binding StatusMessage}" TextColor="{StaticResource Tertiary}" />
+                </VerticalStackLayout>
+            </ScrollView>
+        </RefreshView>
         <controls:LoadingOverlay Grid.RowSpan="2" ZIndex="99" />
     </Grid>
 </ContentPage>

@@ -3,32 +3,47 @@ using System.Globalization;
 using System.Linq;
 using ClientTracker.Models;
 using ClientTracker.Services;
+using Microsoft.Maui.ApplicationModel;
 
 namespace ClientTracker.ViewModels;
 
 public class DashboardViewModel : ViewModelBase
 {
     private readonly DatabaseService _database;
+    private readonly LocalizationResourceManager _localization;
     private int _clientCount;
     private int _saleCount;
     private decimal _monthCommission;
     private decimal _totalSalesAmount;
     private decimal _totalCommissionAmount;
     private decimal _outstandingCommissionAmount;
-    private int _upcomingPaymentCount;
-    private decimal _upcomingCommissionAmount;
+    private string _totalSalesAmountText = string.Empty;
+    private string _outstandingCommissionAmountText = string.Empty;
+    private int _selectedCommissionIndex;
+    private DashboardCommissionSummary? _selectedCommissionSummary;
+    private string _trendRangeLabel = string.Empty;
     private IReadOnlyList<double> _trendSales = Array.Empty<double>();
     private IReadOnlyList<double> _trendCommission = Array.Empty<double>();
     private IReadOnlyList<string> _trendLabels = Array.Empty<string>();
 
-    public DashboardViewModel(DatabaseService database)
+    public DashboardViewModel(DatabaseService database, LocalizationResourceManager localization)
     {
         _database = database;
+        _localization = localization;
         MonthlySummaries = new ObservableCollection<DashboardMonthSummary>();
+        CommissionSummaries = new ObservableCollection<DashboardCommissionSummary>();
         RefreshCommand = new Command(async () => await LoadAsync());
-        OpenClientsCommand = new Command(async () => await Shell.Current.GoToAsync("//Clients"));
-        OpenSalesCommand = new Command(async () => await Shell.Current.GoToAsync("//Sales"));
-        OpenCalendarCommand = new Command(async () => await Shell.Current.GoToAsync("//PayCalendar"));
+        OpenClientsCommand = new Command(async () => await Shell.Current.GoToAsync("//ClientsPage"));
+        OpenSalesCommand = new Command(async () => await Shell.Current.GoToAsync("//SalesPage"));
+        OpenCalendarCommand = new Command(async () => await Shell.Current.GoToAsync("//PayCalendarPage"));
+        _localization.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == "Item[]" || args.PropertyName == nameof(LocalizationResourceManager.CurrentCulture))
+            {
+                UpdateCurrencyText();
+                OnPropertyChanged(nameof(TrendRangeLabel));
+            }
+        };
     }
 
     public int ClientCount
@@ -52,7 +67,19 @@ public class DashboardViewModel : ViewModelBase
     public decimal TotalSalesAmount
     {
         get => _totalSalesAmount;
-        set => SetProperty(ref _totalSalesAmount, value);
+        set
+        {
+            if (SetProperty(ref _totalSalesAmount, value))
+            {
+                UpdateCurrencyText();
+            }
+        }
+    }
+
+    public string TotalSalesAmountText
+    {
+        get => _totalSalesAmountText;
+        private set => SetProperty(ref _totalSalesAmountText, value);
     }
 
     public decimal TotalCommissionAmount
@@ -64,22 +91,35 @@ public class DashboardViewModel : ViewModelBase
     public decimal OutstandingCommissionAmount
     {
         get => _outstandingCommissionAmount;
-        set => SetProperty(ref _outstandingCommissionAmount, value);
+        set
+        {
+            if (SetProperty(ref _outstandingCommissionAmount, value))
+            {
+                UpdateCurrencyText();
+            }
+        }
     }
 
-    public int UpcomingPaymentCount
+    public string OutstandingCommissionAmountText
     {
-        get => _upcomingPaymentCount;
-        set => SetProperty(ref _upcomingPaymentCount, value);
-    }
-
-    public decimal UpcomingCommissionAmount
-    {
-        get => _upcomingCommissionAmount;
-        set => SetProperty(ref _upcomingCommissionAmount, value);
+        get => _outstandingCommissionAmountText;
+        private set => SetProperty(ref _outstandingCommissionAmountText, value);
     }
 
     public ObservableCollection<DashboardMonthSummary> MonthlySummaries { get; }
+    public ObservableCollection<DashboardCommissionSummary> CommissionSummaries { get; }
+
+    public int SelectedCommissionIndex
+    {
+        get => _selectedCommissionIndex;
+        set => SetProperty(ref _selectedCommissionIndex, value);
+    }
+
+    public DashboardCommissionSummary? SelectedCommissionSummary
+    {
+        get => _selectedCommissionSummary;
+        set => SetProperty(ref _selectedCommissionSummary, value);
+    }
 
     public IReadOnlyList<double> TrendSales
     {
@@ -99,6 +139,12 @@ public class DashboardViewModel : ViewModelBase
         set => SetProperty(ref _trendLabels, value);
     }
 
+    public string TrendRangeLabel
+    {
+        get => _trendRangeLabel;
+        set => SetProperty(ref _trendRangeLabel, value);
+    }
+
     public Command RefreshCommand { get; }
     public Command OpenClientsCommand { get; }
     public Command OpenSalesCommand { get; }
@@ -115,16 +161,19 @@ public class DashboardViewModel : ViewModelBase
 
             var payments = await _database.GetAllPaymentsAsync();
             TotalCommissionAmount = payments.Sum(p => p.Commission);
-            OutstandingCommissionAmount = payments.Where(p => !p.IsPaid).Sum(p => p.Commission);
+            OutstandingCommissionAmount = TotalCommissionAmount;
+            UpdateCurrencyText();
 
             var month = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
             var monthPayments = await _database.GetPaymentsForMonthAsync(month);
             MonthCommission = monthPayments.Sum(p => p.Commission);
 
-            var upcomingEnd = DateTime.Today.AddDays(30);
-            var upcomingPayments = payments.Where(p => p.PayDate >= DateTime.Today && p.PayDate <= upcomingEnd && !p.IsPaid).ToList();
-            UpcomingPaymentCount = upcomingPayments.Count;
-            UpcomingCommissionAmount = upcomingPayments.Sum(p => p.Commission);
+            var (selectedIndex, selectedSummary) = BuildCommissionSummaries(payments);
+            await MainThread.InvokeOnMainThreadAsync(() =>
+            {
+                SelectedCommissionIndex = selectedIndex;
+                SelectedCommissionSummary = selectedSummary;
+            });
 
             BuildMonthlySummaries(sales, payments);
             BuildTrends();
@@ -135,7 +184,7 @@ public class DashboardViewModel : ViewModelBase
     {
         MonthlySummaries.Clear();
         var start = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).AddMonths(-5);
-        var months = Enumerable.Range(0, 6).Select(i => start.AddMonths(i)).ToList();
+        var months = Enumerable.Range(0, 12).Select(i => start.AddMonths(i)).ToList();
         var summaries = months.Select(month =>
         {
             var monthStart = new DateTime(month.Year, month.Month, 1);
@@ -144,7 +193,7 @@ public class DashboardViewModel : ViewModelBase
             var monthPayments = payments.Where(p => p.PayDate >= monthStart && p.PayDate <= monthEnd).ToList();
             return new DashboardMonthSummary
             {
-                MonthLabel = monthStart.ToString("MMM yyyy"),
+                MonthLabel = BuildMonthLabel(monthStart),
                 SalesAmount = monthSales.Sum(s => s.Amount),
                 CommissionAmount = monthPayments.Sum(p => p.Commission)
             };
@@ -158,6 +207,13 @@ public class DashboardViewModel : ViewModelBase
             summary.CommissionRatio = maxCommission == 0 ? 0 : (double)(summary.CommissionAmount / maxCommission);
             MonthlySummaries.Add(summary);
         }
+
+        if (months.Count > 0)
+        {
+            var first = months[0];
+            var last = months[^1];
+            TrendRangeLabel = $"{first:MMM yyyy} - {last:MMM yyyy}";
+        }
     }
 
     private void BuildTrends()
@@ -165,6 +221,68 @@ public class DashboardViewModel : ViewModelBase
         TrendLabels = MonthlySummaries.Select(m => m.MonthLabel).ToArray();
         TrendSales = MonthlySummaries.Select(m => (double)m.SalesAmount).ToArray();
         TrendCommission = MonthlySummaries.Select(m => (double)m.CommissionAmount).ToArray();
+    }
+
+    private void UpdateCurrencyText()
+    {
+        var culture = CultureInfo.CurrentCulture;
+        TotalSalesAmountText = TotalSalesAmount.ToString("C", culture);
+        OutstandingCommissionAmountText = OutstandingCommissionAmount.ToString("C", culture);
+    }
+
+    private (int index, DashboardCommissionSummary? summary) BuildCommissionSummaries(IReadOnlyCollection<Payment> payments)
+    {
+        CommissionSummaries.Clear();
+        var start = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).AddMonths(-5);
+        var months = Enumerable.Range(0, 12).Select(i => start.AddMonths(i)).ToList();
+        var currentMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+        var selectedIndex = 0;
+        DashboardCommissionSummary? selectedSummary = null;
+
+        for (var i = 0; i < months.Count; i++)
+        {
+            var monthStart = new DateTime(months[i].Year, months[i].Month, 1);
+            var monthEnd = monthStart.AddMonths(1).AddDays(-1);
+            var midMonth = monthStart.AddDays(14);
+            var monthPayments = payments
+                .Where(p => p.PayDate >= monthStart && p.PayDate <= monthEnd)
+                .ToList();
+            var midMonthAmount = monthPayments
+                .Where(p => p.PayDate.Date == midMonth.Date)
+                .Sum(p => p.Commission);
+            var endMonthAmount = monthPayments
+                .Where(p => p.PayDate.Date == monthEnd.Date)
+                .Sum(p => p.Commission);
+
+            var monthLabel = monthStart.ToString("MMMM yyyy", CultureInfo.CurrentCulture);
+            var summary = new DashboardCommissionSummary
+            {
+                Title = string.Format(_localization["Dashboard_UpcomingCommission"], monthLabel),
+                CommissionAmount = monthPayments.Sum(p => p.Commission),
+                PaymentCount = monthPayments.Count,
+                MidMonthAmount = midMonthAmount,
+                EndMonthAmount = endMonthAmount
+            };
+            CommissionSummaries.Add(summary);
+
+            if (monthStart == currentMonth)
+            {
+                selectedIndex = i;
+                selectedSummary = summary;
+            }
+        }
+
+        return (selectedIndex, selectedSummary ?? CommissionSummaries.ElementAtOrDefault(selectedIndex));
+    }
+
+    private static string BuildMonthLabel(DateTime monthStart)
+    {
+        if (DeviceInfo.Platform == DevicePlatform.Android)
+        {
+            return monthStart.ToString("MMM", CultureInfo.CurrentCulture);
+        }
+
+        return monthStart.ToString("MMM yyyy", CultureInfo.CurrentCulture);
     }
 }
 
@@ -175,4 +293,13 @@ public class DashboardMonthSummary
     public decimal CommissionAmount { get; set; }
     public double SalesRatio { get; set; }
     public double CommissionRatio { get; set; }
+}
+
+public class DashboardCommissionSummary
+{
+    public string Title { get; set; } = string.Empty;
+    public decimal CommissionAmount { get; set; }
+    public int PaymentCount { get; set; }
+    public decimal MidMonthAmount { get; set; }
+    public decimal EndMonthAmount { get; set; }
 }

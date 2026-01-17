@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <ContentPage
     x:Class="ClientTracker.Pages.DashboardPage"
+    x:Name="DashboardPageRoot"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:controls="clr-namespace:ClientTracker.Controls"
@@ -14,41 +15,11 @@
     <Grid RowDefinitions="Auto,*">
         <controls:TopBar
             Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Title_Dashboard]}"
-            Subtitle="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Dashboard_Subtitle]}">
-            <controls:TopBar.RightContent>
-                <Grid ColumnDefinitions="260,180,Auto" ColumnSpacing="10" VerticalOptions="Center">
-                    <Border BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource Gray950}}" Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource Gray600}}" StrokeThickness="1" Padding="12,10">
-                        <Border.StrokeShape>
-                            <RoundRectangle CornerRadius="14" />
-                        </Border.StrokeShape>
-                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                            <Image Source="{OnPlatform WinUI=icon_search_win.png, Default=icon_search}" WidthRequest="18" HeightRequest="18" Opacity="0.7" VerticalOptions="Center" />
-                            <Entry Grid.Column="1" Placeholder="Search…" BackgroundColor="Transparent" />
-                        </Grid>
-                    </Border>
+            Subtitle="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Dashboard_Subtitle]}" />
 
-                    <Border Grid.Column="1" BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource Gray950}}" Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource Gray600}}" StrokeThickness="1" Padding="12,10">
-                        <Border.StrokeShape>
-                            <RoundRectangle CornerRadius="14" />
-                        </Border.StrokeShape>
-                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                            <Label Text="Filter" VerticalTextAlignment="Center" />
-                            <Label Grid.Column="1" Text="▾" Opacity="0.7" VerticalTextAlignment="Center" />
-                        </Grid>
-                    </Border>
-
-                    <Border Grid.Column="2" WidthRequest="42" HeightRequest="42" BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource Gray950}}" Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource Gray600}}" StrokeThickness="1" VerticalOptions="Center">
-                        <Border.StrokeShape>
-                            <RoundRectangle CornerRadius="14" />
-                        </Border.StrokeShape>
-                        <ImageButton Source="{OnPlatform WinUI=icon_bell_win.png, Default=icon_bell}" BackgroundColor="Transparent" Padding="10" Command="{Binding RefreshCommand}" />
-                    </Border>
-                </Grid>
-            </controls:TopBar.RightContent>
-        </controls:TopBar>
-
-        <ScrollView Grid.Row="1">
-            <VerticalStackLayout Padding="{StaticResource PagePadding}" Spacing="16">
+        <RefreshView Grid.Row="1" Command="{Binding RefreshCommand}" IsRefreshing="{Binding IsBusy}">
+            <ScrollView>
+                <VerticalStackLayout Padding="{StaticResource PagePadding}" Spacing="16">
 
                 <FlexLayout Wrap="Wrap" JustifyContent="SpaceBetween" AlignItems="Stretch">
                     <Border Padding="16" StrokeThickness="0" Margin="0,0,0,12" FlexLayout.Basis="48%">
@@ -95,7 +66,7 @@
                         </Border.StrokeShape>
                         <VerticalStackLayout Spacing="6">
                             <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Dashboard_TotalRevenue]}" Style="{StaticResource MutedLabel}" />
-                            <Label Text="{Binding TotalSalesAmount, StringFormat='{0:C}'}" FontSize="26" FontAttributes="Bold" />
+                            <Label Text="{Binding TotalSalesAmountText}" FontSize="26" FontAttributes="Bold" />
                         </VerticalStackLayout>
                     </Border>
 
@@ -111,35 +82,70 @@
                         </Border.StrokeShape>
                         <VerticalStackLayout Spacing="6">
                             <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Dashboard_OutstandingCommission]}" Style="{StaticResource MutedLabel}" />
-                            <Label Text="{Binding OutstandingCommissionAmount, StringFormat='{0:C}'}" FontSize="26" FontAttributes="Bold" />
+                            <Label Text="{Binding OutstandingCommissionAmountText}" FontSize="26" FontAttributes="Bold" />
                         </VerticalStackLayout>
                     </Border>
                 </FlexLayout>
 
-            <Frame Style="{StaticResource CardFrame}">
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                    <VerticalStackLayout Spacing="6">
-                        <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Dashboard_UpcomingCommission]}" Style="{StaticResource MutedLabel}" />
-                        <Label Text="{Binding UpcomingCommissionAmount, StringFormat='{0:C}'}" FontSize="24" FontAttributes="Bold" />
-                        <Label Style="{StaticResource MutedLabel}">
-                            <Label.FormattedText>
-                                <FormattedString>
-                                    <Span Text="{Binding UpcomingPaymentCount}" />
-                                    <Span Text=" " />
-                                    <Span Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Dashboard_UpcomingPayments]}" />
-                                </FormattedString>
-                            </Label.FormattedText>
-                        </Label>
-                    </VerticalStackLayout>
-                    <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Refresh]}" Command="{Binding RefreshCommand}" Grid.Column="1" VerticalOptions="Center" Style="{StaticResource InlineButton}" />
-                </Grid>
-            </Frame>
+            <Border Padding="24,0" BackgroundColor="Transparent" StrokeThickness="0">
+                <CollectionView
+                    x:Name="CommissionCarousel"
+                    ItemsSource="{Binding CommissionSummaries}"
+                    SelectionMode="None"
+                    HorizontalScrollBarVisibility="Never"
+                    HeightRequest="170">
+                    <CollectionView.ItemsLayout>
+                        <LinearItemsLayout Orientation="Horizontal" SnapPointsType="MandatorySingle" SnapPointsAlignment="Center" ItemSpacing="12" />
+                    </CollectionView.ItemsLayout>
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate>
+                            <Frame Style="{StaticResource CardFrame}" WidthRequest="320" HorizontalOptions="Center">
+                                <Frame.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding BindingContext.OpenCalendarCommand, Source={x:Reference DashboardPageRoot}}" />
+                                </Frame.GestureRecognizers>
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                    <VerticalStackLayout Spacing="6">
+                                        <Label Text="{Binding Title}" Style="{StaticResource MutedLabel}" />
+                                        <Label Text="{Binding CommissionAmount, StringFormat='{0:C}'}" FontSize="24" FontAttributes="Bold" />
+                                        <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                                            <VerticalStackLayout Spacing="2">
+                                                <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Dashboard_CommissionMidMonth]}" Style="{StaticResource MutedLabel}" />
+                                                <Label Text="{Binding MidMonthAmount, StringFormat='{0:C}'}" FontAttributes="Bold" />
+                                            </VerticalStackLayout>
+                                        <VerticalStackLayout Grid.Column="1" Spacing="2" HorizontalOptions="End">
+                                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Dashboard_CommissionEndMonth]}" Style="{StaticResource MutedLabel}" HorizontalTextAlignment="End" />
+                                            <Label Text="{Binding EndMonthAmount, StringFormat='{0:C}'}" FontAttributes="Bold" HorizontalTextAlignment="End" />
+                                        </VerticalStackLayout>
+                                        </Grid>
+                                        <HorizontalStackLayout Spacing="8">
+                                            <Border Style="{StaticResource BadgeBorder}">
+                                                <Label>
+                                                    <Label.Style>
+                                                        <StaticResource Key="BadgeLabel" />
+                                                    </Label.Style>
+                                                    <Label.FormattedText>
+                                                        <FormattedString>
+                                                            <Span Text="{Binding PaymentCount}" />
+                                                            <Span Text=" " />
+                                                            <Span Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Dashboard_UpcomingPayments]}" />
+                                                        </FormattedString>
+                                                    </Label.FormattedText>
+                                                </Label>
+                                            </Border>
+                                        </HorizontalStackLayout>
+                                    </VerticalStackLayout>
+                                </Grid>
+                            </Frame>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </Border>
 
                 <Frame Style="{StaticResource CardFrame}">
                     <VerticalStackLayout Spacing="12">
                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Dashboard_Trends]}" Style="{StaticResource SectionTitle}" />
-                            <Label Text="Last 6 months" Style="{StaticResource MutedLabel}" Grid.Column="1" VerticalTextAlignment="Center" />
+                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Dashboard_SalesCommissionTitle]}" Style="{StaticResource SectionTitle}" />
+                            <Label Text="{Binding TrendRangeLabel}" Style="{StaticResource MutedLabel}" Grid.Column="1" VerticalTextAlignment="Center" />
                         </Grid>
                         <controls:TrendChart
                             Labels="{Binding TrendLabels}"
@@ -147,10 +153,13 @@
                             SeriesB="{Binding TrendCommission}" />
                     </VerticalStackLayout>
                 </Frame>
-            </VerticalStackLayout>
-        </ScrollView>
+                </VerticalStackLayout>
+            </ScrollView>
+        </RefreshView>
         <controls:LoadingOverlay Grid.RowSpan="2" ZIndex="99" />
     </Grid>
 </ContentPage>
+
+
 
 

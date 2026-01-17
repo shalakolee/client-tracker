@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
+using System.Threading;
+using Microsoft.Maui.ApplicationModel;
 using ClientTracker.Models;
 using ClientTracker.Services;
 
@@ -30,7 +32,12 @@ public class ClientsViewModel : ViewModelBase
     private ClientSortOption? _selectedSortOption;
     private bool _hasSalesOnly;
     private bool _hasUpcomingOnly;
-    private const int PageSize = 10;
+    private bool _isFilterSheetOpen;
+    private bool _suppressReload;
+    private bool _pendingReload;
+    private bool _pendingResetPage;
+    private CancellationTokenSource? _searchCts;
+    private const int PageSize = 25;
 
     public ClientsViewModel(DatabaseService database, LocalizationResourceManager localization)
     {
@@ -68,6 +75,12 @@ public class ClientsViewModel : ViewModelBase
         DeleteClientItemCommand = new Command<ClientListItem>(async client => await DeleteClientAsync(client));
         PreviousPageCommand = new Command(async () => await ChangePageAsync(-1), () => CurrentPage > 0);
         NextPageCommand = new Command(async () => await ChangePageAsync(1), () => CurrentPage < TotalPages - 1);
+        LoadMoreCommand = new Command(async () => await LoadMoreAsync(), () => HasMoreResults);
+        ToggleHasSalesOnlyCommand = new Command(() => HasSalesOnly = !HasSalesOnly);
+        ToggleHasUpcomingOnlyCommand = new Command(() => HasUpcomingOnly = !HasUpcomingOnly);
+        OpenFilterSheetCommand = new Command(() => IsFilterSheetOpen = true);
+        CloseFilterSheetCommand = new Command(() => IsFilterSheetOpen = false);
+        ClearFiltersCommand = new Command(ClearFilters);
     }
 
     public ObservableCollection<ClientListItem> Clients { get; }
@@ -78,7 +91,14 @@ public class ClientsViewModel : ViewModelBase
     public string ClientSearch
     {
         get => _clientSearch;
-        set => SetProperty(ref _clientSearch, value);
+        set
+        {
+            if (SetProperty(ref _clientSearch, value))
+            {
+                NotifyFilterStateChanged();
+                ScheduleSearchReload();
+            }
+        }
     }
 
     public Client? SelectedClient
@@ -148,7 +168,13 @@ public class ClientsViewModel : ViewModelBase
     public int TotalClients
     {
         get => _totalClients;
-        set => SetProperty(ref _totalClients, value);
+        set
+        {
+            if (SetProperty(ref _totalClients, value))
+            {
+                OnPropertyChanged(nameof(ClientCountLabel));
+            }
+        }
     }
 
     public int ActiveClients
@@ -178,25 +204,67 @@ public class ClientsViewModel : ViewModelBase
     public ClientFilterOption? SelectedCountryFilter
     {
         get => _selectedCountryFilter;
-        set => SetProperty(ref _selectedCountryFilter, value);
+        set
+        {
+            if (SetProperty(ref _selectedCountryFilter, value))
+            {
+                NotifyFilterStateChanged();
+                RequestReload(true);
+            }
+        }
     }
 
     public ClientSortOption? SelectedSortOption
     {
         get => _selectedSortOption;
-        set => SetProperty(ref _selectedSortOption, value);
+        set
+        {
+            if (SetProperty(ref _selectedSortOption, value))
+            {
+                RequestReload(true);
+            }
+        }
     }
 
     public bool HasSalesOnly
     {
         get => _hasSalesOnly;
-        set => SetProperty(ref _hasSalesOnly, value);
+        set
+        {
+            if (SetProperty(ref _hasSalesOnly, value))
+            {
+                NotifyFilterStateChanged();
+                RequestReload(true);
+            }
+        }
     }
 
     public bool HasUpcomingOnly
     {
         get => _hasUpcomingOnly;
-        set => SetProperty(ref _hasUpcomingOnly, value);
+        set
+        {
+            if (SetProperty(ref _hasUpcomingOnly, value))
+            {
+                NotifyFilterStateChanged();
+                RequestReload(true);
+            }
+        }
+    }
+
+    public bool IsFiltered =>
+        !string.IsNullOrWhiteSpace(ClientSearch) ||
+        HasSalesOnly ||
+        HasUpcomingOnly ||
+        (SelectedCountryFilter is { Value: not "ALL" });
+
+    public string ClientCountLabel =>
+        IsFiltered ? $"• {TotalClients} filtered" : $"• {TotalClients}";
+
+    public bool IsFilterSheetOpen
+    {
+        get => _isFilterSheetOpen;
+        set => SetProperty(ref _isFilterSheetOpen, value);
     }
 
     public int CurrentPage
@@ -221,6 +289,7 @@ public class ClientsViewModel : ViewModelBase
             if (SetProperty(ref _totalPages, value))
             {
                 OnPropertyChanged(nameof(PageLabel));
+                OnPropertyChanged(nameof(HasMoreResults));
                 PreviousPageCommand.ChangeCanExecute();
                 NextPageCommand.ChangeCanExecute();
             }
@@ -228,6 +297,7 @@ public class ClientsViewModel : ViewModelBase
     }
 
     public string PageLabel => TotalPages == 0 ? "Page 0 of 0" : $"Page {CurrentPage + 1} of {TotalPages}";
+    public bool HasMoreResults => CurrentPage < TotalPages - 1;
 
     public Command LoadCommand { get; }
     public Command SearchCommand { get; }
@@ -244,61 +314,105 @@ public class ClientsViewModel : ViewModelBase
     public Command<ClientListItem> DeleteClientItemCommand { get; }
     public Command PreviousPageCommand { get; }
     public Command NextPageCommand { get; }
+    public Command LoadMoreCommand { get; }
+    public Command ToggleHasSalesOnlyCommand { get; }
+    public Command ToggleHasUpcomingOnlyCommand { get; }
+    public Command OpenFilterSheetCommand { get; }
+    public Command CloseFilterSheetCommand { get; }
+    public Command ClearFiltersCommand { get; }
 
     public async Task LoadAsync()
     {
         await RunBusyAsync(async () =>
         {
-            StatusMessage = string.Empty;
-            var clients = await _database.GetClientsAsync(ClientSearch);
-            await EnsureCountryFiltersAsync(clients);
-            var baseIds = clients.Select(c => c.Id).ToList();
-            var sales = await _database.GetSalesForClientIdsAsync(baseIds);
-            var upcomingEnd = DateTime.Today.AddDays(30);
-            var upcomingPayments = await _database.GetPaymentsForClientIdsBetweenAsync(baseIds, DateTime.Today, upcomingEnd);
-            var filteredClients = ApplyActivityFilters(clients, sales, upcomingPayments);
-            var sortedClients = ApplySort(filteredClients, sales, upcomingPayments);
-
-            TotalClients = sortedClients.Count;
-            TotalPages = TotalClients == 0 ? 0 : (int)Math.Ceiling(TotalClients / (double)PageSize);
-            if (CurrentPage >= TotalPages && TotalPages > 0)
-            {
-                CurrentPage = TotalPages - 1;
-            }
-
-            var pageClients = sortedClients
-                .Skip(CurrentPage * PageSize)
-                .Take(PageSize)
-                .ToList();
-
-            TotalSalesCount = sales.Count;
-            TotalSalesAmount = sales.Sum(s => s.Amount);
-            UpcomingCommissionAmount = upcomingPayments.Where(p => !p.IsPaid).Sum(p => p.Commission);
-            ActiveClients = sortedClients.Count(c => sales.Any(s => s.ClientId == c.Id));
-            Clients.Clear();
-            foreach (var client in pageClients)
-            {
-                var clientSales = sales.Where(s => s.ClientId == client.Id).ToList();
-                var totalSalesAmount = clientSales.Sum(s => s.Amount);
-                var upcomingClientPayments = upcomingPayments.Where(p => clientSales.Any(s => s.Id == p.SaleId) && !p.IsPaid).ToList();
-
-                Clients.Add(new ClientListItem
-                {
-                    Id = client.Id,
-                    Name = client.Name,
-                    LocationLine = BuildLocationLine(client),
-                    TotalSalesCount = clientSales.Count,
-                    TotalSalesAmount = totalSalesAmount,
-                    UpcomingPaymentCount = upcomingClientPayments.Count,
-                    UpcomingCommissionAmount = upcomingClientPayments.Sum(p => p.Commission)
-                });
-            }
-
-            if (SelectedClient is not null)
-            {
-                SelectedClient = pageClients.FirstOrDefault(c => c.Id == SelectedClient.Id);
-            }
+            await LoadPageAsync(0, false);
         });
+
+        if (_pendingReload)
+        {
+            var resetPage = _pendingResetPage;
+            _pendingReload = false;
+            _pendingResetPage = false;
+            await LoadAsync();
+        }
+    }
+
+    private async Task LoadMoreAsync()
+    {
+        if (IsBusy || !HasMoreResults)
+        {
+            return;
+        }
+
+        await RunBusyAsync(async () =>
+        {
+            await LoadPageAsync(CurrentPage + 1, true);
+        });
+    }
+
+    private async Task LoadPageAsync(int pageIndex, bool append)
+    {
+        StatusMessage = string.Empty;
+        var clients = await _database.GetClientsAsync(ClientSearch);
+        await EnsureCountryFiltersAsync(clients);
+        var baseIds = clients.Select(c => c.Id).ToList();
+        var sales = await _database.GetSalesForClientIdsAsync(baseIds);
+        var upcomingEnd = DateTime.Today.AddDays(30);
+        var upcomingPayments = await _database.GetPaymentsForClientIdsBetweenAsync(baseIds, DateTime.Today, upcomingEnd);
+        var filteredClients = ApplyActivityFilters(clients, sales, upcomingPayments);
+        var sortedClients = ApplySort(filteredClients, sales, upcomingPayments);
+
+        TotalClients = sortedClients.Count;
+        TotalPages = TotalClients == 0 ? 0 : (int)Math.Ceiling(TotalClients / (double)PageSize);
+        if (pageIndex >= TotalPages && TotalPages > 0)
+        {
+            pageIndex = TotalPages - 1;
+        }
+
+        var pageClients = sortedClients
+            .Skip(pageIndex * PageSize)
+            .Take(PageSize)
+            .ToList();
+
+        TotalSalesCount = sales.Count;
+        TotalSalesAmount = sales.Sum(s => s.Amount);
+        UpcomingCommissionAmount = upcomingPayments.Sum(p => p.Commission);
+        ActiveClients = sortedClients.Count(c => sales.Any(s => s.ClientId == c.Id));
+
+        if (!append)
+        {
+            Clients.Clear();
+        }
+
+        foreach (var client in pageClients)
+        {
+            if (append && Clients.Any(c => c.Id == client.Id))
+            {
+                continue;
+            }
+
+            var clientSales = sales.Where(s => s.ClientId == client.Id).ToList();
+            var totalSalesAmount = clientSales.Sum(s => s.Amount);
+            var upcomingClientPayments = upcomingPayments.Where(p => clientSales.Any(s => s.Id == p.SaleId)).ToList();
+
+            Clients.Add(new ClientListItem
+            {
+                Id = client.Id,
+                Name = client.Name,
+                LocationLine = BuildLocationLine(client),
+                Initials = BuildInitials(client.Name),
+                TotalSalesCount = clientSales.Count,
+                TotalSalesAmount = totalSalesAmount,
+                UpcomingPaymentCount = upcomingClientPayments.Count,
+                UpcomingCommissionAmount = upcomingClientPayments.Sum(p => p.Commission)
+            });
+        }
+
+        CurrentPage = pageIndex;
+        if (SelectedClient is not null)
+        {
+            SelectedClient = pageClients.FirstOrDefault(c => c.Id == SelectedClient.Id);
+        }
     }
 
     private async Task LoadSalesAsync()
@@ -518,25 +632,120 @@ public class ClientsViewModel : ViewModelBase
         return parts.Count == 0 ? "Location not set" : string.Join(", ", parts);
     }
 
-    private Task EnsureCountryFiltersAsync(IReadOnlyCollection<Client> clients)
+    private static string BuildInitials(string name)
     {
-        var selectedValue = SelectedCountryFilter?.Value ?? "ALL";
-        CountryFilters.Clear();
-        CountryFilters.Add(new ClientFilterOption("ALL", _localization["Clients_Filter_AllCountries"]));
-
-        var countries = clients
-            .Select(c => c.Country?.Trim())
-            .Where(c => !string.IsNullOrWhiteSpace(c))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(c => c, StringComparer.OrdinalIgnoreCase);
-        foreach (var country in countries)
+        if (string.IsNullOrWhiteSpace(name))
         {
-            CountryFilters.Add(new ClientFilterOption(country!, country!));
+            return "?";
         }
 
-        SelectedCountryFilter = CountryFilters.FirstOrDefault(f => f.Value == selectedValue) ?? CountryFilters.FirstOrDefault();
-        SelectedSortOption ??= SortOptions.FirstOrDefault();
+        var parts = name
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .ToArray();
+
+        if (parts.Length == 0)
+        {
+            return "?";
+        }
+
+        return char.ToUpperInvariant(parts[0][0]).ToString();
+    }
+
+    private Task EnsureCountryFiltersAsync(IReadOnlyCollection<Client> clients)
+    {
+        _suppressReload = true;
+        try
+        {
+            var selectedValue = SelectedCountryFilter?.Value ?? "ALL";
+            CountryFilters.Clear();
+            CountryFilters.Add(new ClientFilterOption("ALL", _localization["Clients_Filter_AllCountries"]));
+
+            var countries = clients
+                .Select(c => c.Country?.Trim())
+                .Where(c => !string.IsNullOrWhiteSpace(c))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(c => c, StringComparer.OrdinalIgnoreCase);
+            foreach (var country in countries)
+            {
+                CountryFilters.Add(new ClientFilterOption(country!, country!));
+            }
+
+            SelectedCountryFilter = CountryFilters.FirstOrDefault(f => f.Value == selectedValue) ?? CountryFilters.FirstOrDefault();
+            SelectedSortOption ??= SortOptions.FirstOrDefault();
+        }
+        finally
+        {
+            _suppressReload = false;
+        }
+
         return Task.CompletedTask;
+    }
+
+    private void ClearFilters()
+    {
+        HasSalesOnly = false;
+        HasUpcomingOnly = false;
+        SelectedCountryFilter = CountryFilters.FirstOrDefault();
+        SelectedSortOption = SortOptions.FirstOrDefault();
+    }
+
+    private void ScheduleSearchReload()
+    {
+        if (_suppressReload)
+        {
+            return;
+        }
+
+        _searchCts?.Cancel();
+        var cts = new CancellationTokenSource();
+        _searchCts = cts;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(300, cts.Token);
+                if (!cts.Token.IsCancellationRequested)
+                {
+                    MainThread.BeginInvokeOnMainThread(() => RequestReload(true));
+                }
+            }
+            catch (TaskCanceledException)
+            {
+            }
+        });
+    }
+
+    private void NotifyFilterStateChanged()
+    {
+        OnPropertyChanged(nameof(IsFiltered));
+        OnPropertyChanged(nameof(ClientCountLabel));
+    }
+
+    private void RequestReload(bool resetPage)
+    {
+        if (_suppressReload)
+        {
+            return;
+        }
+
+        if (resetPage)
+        {
+            CurrentPage = 0;
+        }
+
+        if (IsBusy)
+        {
+            _pendingReload = true;
+            _pendingResetPage = _pendingResetPage || resetPage;
+            return;
+        }
+
+        if (resetPage)
+        {
+            CurrentPage = 0;
+        }
+
+        _ = LoadAsync();
     }
 
     private List<Client> ApplyActivityFilters(IEnumerable<Client> clients, IReadOnlyCollection<Sale> sales, IReadOnlyCollection<Payment> upcomingPayments)
@@ -556,7 +765,6 @@ public class ClientsViewModel : ViewModelBase
         var salesByClient = sales.GroupBy(s => s.ClientId).ToDictionary(g => g.Key, g => g.Count());
         var saleById = sales.ToDictionary(s => s.Id, s => s.ClientId);
         var upcomingByClient = upcomingPayments
-            .Where(p => !p.IsPaid)
             .GroupBy(p => saleById.TryGetValue(p.SaleId, out var clientId) ? clientId : 0)
             .Where(g => g.Key > 0)
             .ToDictionary(g => g.Key, g => g.Count());
@@ -576,7 +784,6 @@ public class ClientsViewModel : ViewModelBase
         var salesTotals = sales.GroupBy(s => s.ClientId).ToDictionary(g => g.Key, g => g.Sum(s => s.Amount));
         var saleById = sales.ToDictionary(s => s.Id, s => s.ClientId);
         var upcomingTotals = upcomingPayments
-            .Where(p => !p.IsPaid)
             .GroupBy(p => saleById.TryGetValue(p.SaleId, out var clientId) ? clientId : 0)
             .Where(g => g.Key > 0)
             .ToDictionary(g => g.Key, g => g.Sum(p => p.Commission));

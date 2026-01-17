@@ -1,13 +1,21 @@
+using System.Globalization;
+using System.Linq;
+using ClientTracker.Services;
+using Microsoft.Maui.Controls;
 using Microsoft.Maui.Graphics;
 
 namespace ClientTracker.Controls;
 
 public sealed class TrendChart : GraphicsView
 {
+    private RectF _lastPlot;
+
     public TrendChart()
     {
         Drawable = new TrendChartDrawable(this);
         HeightRequest = 260;
+        StartInteraction += OnStartInteraction;
+        DragInteraction += OnDragInteraction;
     }
 
     public static readonly BindableProperty LabelsProperty =
@@ -40,8 +48,64 @@ public sealed class TrendChart : GraphicsView
         set => SetValue(SeriesBProperty, value);
     }
 
+    public static readonly BindableProperty SelectedIndexProperty =
+        BindableProperty.Create(nameof(SelectedIndex), typeof(int), typeof(TrendChart), -1,
+            BindingMode.TwoWay,
+            propertyChanged: (bindable, _, _) => ((TrendChart)bindable).Invalidate());
+
+    public int SelectedIndex
+    {
+        get => (int)GetValue(SelectedIndexProperty);
+        set => SetValue(SelectedIndexProperty, value);
+    }
+
+    public static readonly BindableProperty IsSelectionEnabledProperty =
+        BindableProperty.Create(nameof(IsSelectionEnabled), typeof(bool), typeof(TrendChart), true,
+            propertyChanged: (bindable, _, _) => ((TrendChart)bindable).Invalidate());
+
+    public bool IsSelectionEnabled
+    {
+        get => (bool)GetValue(IsSelectionEnabledProperty);
+        set => SetValue(IsSelectionEnabledProperty, value);
+    }
+
     public Color SeriesAColor { get; set; } = Color.FromArgb("#6366F1");
     public Color SeriesBColor { get; set; } = Color.FromArgb("#14B8A6");
+
+    private void OnStartInteraction(object? sender, TouchEventArgs e) => UpdateSelectionFromTouch(e);
+
+    private void OnDragInteraction(object? sender, TouchEventArgs e) => UpdateSelectionFromTouch(e);
+
+    private void UpdateSelectionFromTouch(TouchEventArgs e)
+    {
+        if (!IsSelectionEnabled || _lastPlot.Width <= 1 || _lastPlot.Height <= 1)
+        {
+            return;
+        }
+
+        var count = Math.Min(SeriesA?.Count ?? 0, SeriesB?.Count ?? 0);
+        if (count <= 0)
+        {
+            return;
+        }
+
+        var location = e.Touches.FirstOrDefault();
+        if (location.X < _lastPlot.Left)
+        {
+            SelectedIndex = 0;
+            return;
+        }
+
+        if (location.X > _lastPlot.Right)
+        {
+            SelectedIndex = count - 1;
+            return;
+        }
+
+        var stepX = count <= 1 ? _lastPlot.Width : _lastPlot.Width / (count - 1);
+        var index = (int)Math.Round((location.X - _lastPlot.Left) / stepX);
+        SelectedIndex = Math.Clamp(index, 0, count - 1);
+    }
 
     private sealed class TrendChartDrawable(TrendChart owner) : IDrawable
     {
@@ -53,7 +117,7 @@ public sealed class TrendChart : GraphicsView
             canvas.FillColor = Colors.Transparent;
             canvas.FillRectangle(dirtyRect);
 
-            var paddingLeft = 10f;
+            var paddingLeft = 36f;
             var paddingTop = 10f;
             var paddingRight = 10f;
             var paddingBottom = 24f;
@@ -63,6 +127,8 @@ public sealed class TrendChart : GraphicsView
                 dirtyRect.Top + paddingTop,
                 dirtyRect.Width - paddingLeft - paddingRight,
                 dirtyRect.Height - paddingTop - paddingBottom);
+
+            owner._lastPlot = plot;
 
             DrawGrid(canvas, plot);
 
@@ -78,6 +144,8 @@ public sealed class TrendChart : GraphicsView
             DrawSeries(canvas, plot, a, owner.SeriesAColor, max);
             DrawSeries(canvas, plot, b, owner.SeriesBColor, max);
             DrawLabels(canvas, plot, owner.Labels ?? Array.Empty<string>());
+            DrawAxisLabels(canvas, plot, max);
+            DrawSelection(canvas, plot, max, owner);
 
             canvas.RestoreState();
         }
@@ -96,6 +164,35 @@ public sealed class TrendChart : GraphicsView
             }
 
             canvas.Alpha = 1;
+        }
+
+        private static void DrawAxisLabels(ICanvas canvas, RectF plot, double max)
+        {
+            canvas.FontColor = Color.FromArgb("#94A3B8");
+            canvas.FontSize = 10;
+
+            var top = FormatAxisValue(max);
+            var mid = FormatAxisValue(max / 2d);
+            var bottom = FormatAxisValue(0);
+
+            canvas.DrawString(top, plot.Left - 26, plot.Top - 2, HorizontalAlignment.Left);
+            canvas.DrawString(mid, plot.Left - 26, plot.Top + plot.Height / 2f - 6, HorizontalAlignment.Left);
+            canvas.DrawString(bottom, plot.Left - 26, plot.Bottom - 10, HorizontalAlignment.Left);
+        }
+
+        private static string FormatAxisValue(double value)
+        {
+            if (value >= 1_000_000)
+            {
+                return $"{value / 1_000_000d:0.#}M";
+            }
+
+            if (value >= 1_000)
+            {
+                return $"{value / 1_000d:0.#}K";
+            }
+
+            return value.ToString("0");
         }
 
         private static void DrawSeries(ICanvas canvas, RectF plot, IReadOnlyList<double> values, Color color, double max)
@@ -162,6 +259,80 @@ public sealed class TrendChart : GraphicsView
                 var x = plot.Left + stepX * index;
                 canvas.DrawString(label, x, plot.Bottom + 6, HorizontalAlignment.Center);
             }
+        }
+
+        private static void DrawSelection(ICanvas canvas, RectF plot, double max, TrendChart owner)
+        {
+            if (!owner.IsSelectionEnabled)
+            {
+                return;
+            }
+
+            var labels = owner.Labels ?? Array.Empty<string>();
+            var a = owner.SeriesA ?? Array.Empty<double>();
+            var b = owner.SeriesB ?? Array.Empty<double>();
+            var count = Math.Min(Math.Min(labels.Count, a.Count), b.Count);
+            if (count == 0)
+            {
+                return;
+            }
+
+            if (owner.SelectedIndex < 0 || owner.SelectedIndex >= count)
+            {
+                owner.SelectedIndex = count - 1;
+            }
+
+            var index = owner.SelectedIndex;
+            var stepX = count <= 1 ? plot.Width : plot.Width / (count - 1);
+            var x = plot.Left + stepX * index;
+
+            canvas.StrokeColor = Color.FromArgb("#94A3B8");
+            canvas.StrokeSize = 1;
+            canvas.Alpha = 0.6f;
+            canvas.DrawLine(x, plot.Top, x, plot.Bottom);
+            canvas.Alpha = 1;
+
+            var sales = a[index];
+            var commission = b[index];
+            var label = labels[index];
+            var localization = LocalizationResourceManager.Instance;
+            var salesLabel = localization["Dashboard_Sales"];
+            var commissionLabel = localization["Dashboard_Commission"];
+            var salesText = string.Format(CultureInfo.CurrentCulture, "{0}: {1:C0}", salesLabel, sales);
+            var commissionText = string.Format(CultureInfo.CurrentCulture, "{0}: {1:C0}", commissionLabel, commission);
+
+            canvas.FontSize = 11;
+            var padding = 8f;
+            var lineHeight = 14f;
+            var width = Math.Max(EstimateTextWidth(label, 11),
+                        Math.Max(EstimateTextWidth(salesText, 11), EstimateTextWidth(commissionText, 11)));
+            var tooltipWidth = width + padding * 2;
+            var tooltipHeight = lineHeight * 3 + padding * 2;
+            var left = Math.Clamp(x - tooltipWidth / 2f, plot.Left, plot.Right - tooltipWidth);
+            var top = Math.Max(plot.Top, plot.Top + 8);
+
+            canvas.FillColor = Color.FromArgb("#FFFFFF");
+            canvas.StrokeColor = Color.FromArgb("#E2E8F0");
+            canvas.StrokeSize = 1;
+            canvas.FillRoundedRectangle(left, top, tooltipWidth, tooltipHeight, 10);
+            canvas.DrawRoundedRectangle(left, top, tooltipWidth, tooltipHeight, 10);
+
+            canvas.FontColor = Color.FromArgb("#0F172A");
+            canvas.DrawString(label, left + padding, top + padding, HorizontalAlignment.Left);
+            canvas.FontColor = owner.SeriesAColor;
+            canvas.DrawString(salesText, left + padding, top + padding + lineHeight, HorizontalAlignment.Left);
+            canvas.FontColor = owner.SeriesBColor;
+            canvas.DrawString(commissionText, left + padding, top + padding + lineHeight * 2, HorizontalAlignment.Left);
+        }
+
+        private static float EstimateTextWidth(string text, float fontSize)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return 0;
+            }
+
+            return text.Length * fontSize * 0.55f;
         }
     }
 }

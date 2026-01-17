@@ -1,5 +1,4 @@
 using ClientTracker.Services;
-using ClientTracker.Models;
 using ClientTracker.ViewModels;
 
 namespace ClientTracker.Pages;
@@ -42,7 +41,7 @@ public partial class PayCalendarPage : ContentPage
         Dispatcher.Dispatch(async () =>
         {
             await Task.Delay(50);
-            if (!_viewModel.IsBusy && _viewModel.PaySummaries.Count == 0)
+            if (!_viewModel.IsBusy && _viewModel.PayDateGroups.Count == 0)
             {
                 _requestedInitialLoad = true;
                 _viewModel.StatusMessage = "Loading...";
@@ -61,32 +60,10 @@ public partial class PayCalendarPage : ContentPage
         }
 
         _requestedInitialLoad = true;
-        if (_viewModel.PaySummaries.Count == 0)
+        if (_viewModel.PayDateGroups.Count == 0)
         {
             _viewModel.StatusMessage = "Loading...";
             _ = _viewModel.LoadAsync();
-        }
-    }
-
-    private async void OnPaymentCheckedChanged(object? sender, CheckedChangedEventArgs e)
-    {
-        if (sender is not CheckBox checkbox)
-        {
-            return;
-        }
-
-        if (checkbox.BindingContext is Models.PaymentScheduleItem item)
-        {
-            try
-            {
-                item.IsPaid = e.Value;
-                await _viewModel.UpdatePaymentStatusAsync(item);
-            }
-            catch (Exception ex)
-            {
-                StartupLog.Write(ex, "PayCalendarPage.OnPaymentCheckedChanged");
-                _viewModel.StatusMessage = "Unable to update payment status.";
-            }
         }
     }
 }

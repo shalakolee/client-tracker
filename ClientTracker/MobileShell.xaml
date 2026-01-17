@@ -12,27 +12,27 @@
     <TabBar>
         <ShellContent
             Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Nav_Dashboard]}"
-            Icon="{OnPlatform WinUI=nav_dashboard_win.png, Default=nav_dashboard}"
+            Icon="nav_dashboard"
             ContentTemplate="{DataTemplate views:DashboardPage}"
             Route="DashboardPage" />
         <ShellContent
             Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Nav_Clients]}"
-            Icon="{OnPlatform WinUI=nav_clients_win.png, Default=nav_clients}"
+            Icon="nav_clients"
             ContentTemplate="{DataTemplate views:ClientsPage}"
             Route="ClientsPage" />
         <ShellContent
             Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Nav_Sales]}"
-            Icon="{OnPlatform WinUI=nav_sales_win.png, Default=nav_sales}"
+            Icon="nav_sales"
             ContentTemplate="{DataTemplate views:SalesPage}"
             Route="SalesPage" />
         <ShellContent
             Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Nav_PayCalendar]}"
-            Icon="{OnPlatform WinUI=nav_calendar_win.png, Default=nav_calendar}"
+            Icon="nav_calendar"
             ContentTemplate="{DataTemplate views:PayCalendarPage}"
             Route="PayCalendarPage" />
         <ShellContent
             Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Nav_Settings]}"
-            Icon="{OnPlatform WinUI=nav_settings_win.png, Default=nav_settings}"
+            Icon="nav_settings"
             ContentTemplate="{DataTemplate views:SettingsPage}"
             Route="SettingsPage" />
     </TabBar>

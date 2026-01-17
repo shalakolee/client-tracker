@@ -9,4 +9,5 @@ public class ClientListItem
     public decimal TotalSalesAmount { get; set; }
     public int UpcomingPaymentCount { get; set; }
     public decimal UpcomingCommissionAmount { get; set; }
+    public string Initials { get; set; } = string.Empty;
 }

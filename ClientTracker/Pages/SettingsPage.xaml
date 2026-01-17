@@ -17,7 +17,10 @@
 
         <ScrollView Grid.Row="1">
             <VerticalStackLayout Padding="{StaticResource PagePadding}" Spacing="16">
-            <Frame Style="{StaticResource CardFrame}">
+            <Border BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource Gray950}}" StrokeThickness="0" Padding="16">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="20" />
+                </Border.StrokeShape>
                 <VerticalStackLayout Spacing="10">
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                         <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_Language]}" Style="{StaticResource SectionTitle}" />
@@ -40,9 +43,12 @@
                         </Picker.ItemDisplayBinding>
                     </Picker>
                 </VerticalStackLayout>
-            </Frame>
+            </Border>
 
-            <Frame Style="{StaticResource CardFrame}">
+            <Border BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource Gray950}}" StrokeThickness="0" Padding="16">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="20" />
+                </Border.StrokeShape>
                 <VerticalStackLayout Spacing="10">
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                         <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_Data]}" Style="{StaticResource SectionTitle}" />
@@ -57,9 +63,12 @@
                     <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_ActiveClients]}" Style="{StaticResource MutedLabel}" />
                     <Label Text="{Binding ActiveClientCount}" />
                 </VerticalStackLayout>
-            </Frame>
+            </Border>
 
-            <Frame Style="{StaticResource CardFrame}">
+            <Border BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource Gray950}}" StrokeThickness="0" Padding="16">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="20" />
+                </Border.StrokeShape>
                 <VerticalStackLayout Spacing="10">
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                         <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_RemoteDb]}" Style="{StaticResource SectionTitle}" />
@@ -94,9 +103,12 @@
                         <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_TestConnection]}" Command="{Binding TestDatabaseConnectionCommand}" Style="{StaticResource InlineButton}" />
                     </HorizontalStackLayout>
                 </VerticalStackLayout>
-            </Frame>
+            </Border>
 
-            <Frame Style="{StaticResource CardFrame}">
+            <Border BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource Gray950}}" StrokeThickness="0" Padding="16">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="20" />
+                </Border.StrokeShape>
                 <VerticalStackLayout Spacing="10">
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                         <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_Updates]}" Style="{StaticResource SectionTitle}" />
@@ -107,11 +119,13 @@
                     <Label Text="{Binding GitHubOwner}" Style="{StaticResource MutedLabel}" />
                     <Label Text="{Binding GitHubRepo}" Style="{StaticResource MutedLabel}" />
                 </VerticalStackLayout>
-            </Frame>
+            </Border>
             </VerticalStackLayout>
         </ScrollView>
         <controls:LoadingOverlay Grid.RowSpan="2" ZIndex="99" />
     </Grid>
 </ContentPage>
+
+
 
 

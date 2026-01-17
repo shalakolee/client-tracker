@@ -12,7 +12,7 @@
     </ContentPage.Background>
 
     <Grid RowDefinitions="Auto,*,Auto">
-        <controls:TopBar Title="{Binding PageTitle}">
+        <controls:TopBar NavigationMode="Back" Title="{Binding PageTitle}">
             <controls:TopBar.RightContent>
                 <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
                     <Button
@@ -30,58 +30,70 @@
 
         <ScrollView Grid.Row="1">
             <VerticalStackLayout Padding="{StaticResource PagePadding}" Spacing="16">
-                <Frame Style="{StaticResource CardFrame}">
-                    <VerticalStackLayout Spacing="10">
-                    <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
-                        <Entry Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Clients_NewClientPlaceholder]}" Text="{Binding ClientName}" />
-                        <Entry Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Client_TaxId]}" Text="{Binding TaxId}" Grid.Column="1" />
-                    </Grid>
-                    <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
-                        <Entry Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Client_AddressLine1]}" Text="{Binding AddressLine1}" />
-                        <Entry Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Client_AddressLine2]}" Text="{Binding AddressLine2}" Grid.Column="1" />
-                    </Grid>
-                    <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
-                        <Entry Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Client_City]}" Text="{Binding City}" />
-                        <Entry Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Client_StateProvince]}" Text="{Binding StateProvince}" Grid.Column="1" />
-                    </Grid>
-                    <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
-                        <Entry Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Client_PostalCode]}" Text="{Binding PostalCode}" />
-                        <Entry Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Client_Country]}" Text="{Binding Country}" Grid.Column="1" />
-                    </Grid>
+                <Border BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource Gray950}}" StrokeThickness="0" Padding="16">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="20" />
+                    </Border.StrokeShape>
+                    <VerticalStackLayout Spacing="12">
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Clients_NewClientPlaceholder]}" Style="{StaticResource MutedLabel}" />
+                            <Border Style="{StaticResource FormFieldContainer}">
+                                <Entry Text="{Binding ClientName}" Style="{StaticResource FormFieldEntry}" />
+                            </Border>
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Client_TaxId]}" Style="{StaticResource MutedLabel}" />
+                            <Border Style="{StaticResource FormFieldContainer}">
+                                <Entry Text="{Binding TaxId}" Style="{StaticResource FormFieldEntry}" />
+                            </Border>
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Client_AddressLine1]}" Style="{StaticResource MutedLabel}" />
+                            <Border Style="{StaticResource FormFieldContainer}">
+                                <Entry Text="{Binding AddressLine1}" Style="{StaticResource FormFieldEntry}" />
+                            </Border>
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Client_AddressLine2]}" Style="{StaticResource MutedLabel}" />
+                            <Border Style="{StaticResource FormFieldContainer}">
+                                <Entry Text="{Binding AddressLine2}" Style="{StaticResource FormFieldEntry}" />
+                            </Border>
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Client_City]}" Style="{StaticResource MutedLabel}" />
+                            <Border Style="{StaticResource FormFieldContainer}">
+                                <Entry Text="{Binding City}" Style="{StaticResource FormFieldEntry}" />
+                            </Border>
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Client_StateProvince]}" Style="{StaticResource MutedLabel}" />
+                            <Border Style="{StaticResource FormFieldContainer}">
+                                <Entry Text="{Binding StateProvince}" Style="{StaticResource FormFieldEntry}" />
+                            </Border>
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Client_PostalCode]}" Style="{StaticResource MutedLabel}" />
+                            <Border Style="{StaticResource FormFieldContainer}">
+                                <Entry Text="{Binding PostalCode}" Style="{StaticResource FormFieldEntry}" />
+                            </Border>
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Client_Country]}" Style="{StaticResource MutedLabel}" />
+                            <Border Style="{StaticResource FormFieldContainer}">
+                                <Entry Text="{Binding Country}" Style="{StaticResource FormFieldEntry}" />
+                            </Border>
+                        </VerticalStackLayout>
                     </VerticalStackLayout>
-                </Frame>
+                </Border>
 
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                <Label Text="{Binding StatusMessage}" TextColor="{StaticResource Tertiary}" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" />
-                <Button
-                    Grid.Column="1"
-                    Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Save]}"
-                    Command="{Binding SaveClientCommand}"
-                    Style="{StaticResource BaseButton}" />
-            </Grid>
+            <Label Text="{Binding StatusMessage}" TextColor="{StaticResource Tertiary}" LineBreakMode="TailTruncation" />
             </VerticalStackLayout>
         </ScrollView>
-
-        <!-- Mobile: make Save always reachable even when the top bar is crowded -->
-        <Border Grid.Row="2"
-                IsVisible="{OnPlatform Android=true, Default=false}"
-                BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceElevated}, Dark={StaticResource Gray950}}"
-                Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource Gray600}}"
-                StrokeThickness="1"
-                Padding="{StaticResource PagePadding}">
-            <Border.StrokeShape>
-                <RoundRectangle CornerRadius="18" />
-            </Border.StrokeShape>
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                <Label Text="{Binding StatusMessage}" Style="{StaticResource MutedLabel}" VerticalOptions="Center" LineBreakMode="TailTruncation" />
-                <Button Grid.Column="1"
-                        Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Save]}"
-                        Command="{Binding SaveClientCommand}"
-                        Style="{StaticResource BaseButton}" />
-            </Grid>
-        </Border>
         <controls:LoadingOverlay Grid.RowSpan="3" ZIndex="99" />
     </Grid>
 </ContentPage>
+
+
+
 
 

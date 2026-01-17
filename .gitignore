@@ -25,3 +25,9 @@ Thumbs.db
 # Database (if generated)
 data/*.db3
 ClientTracker/data/*.db3
+
+# Local docs repo (do not commit)
+material-components-android/
+# Local tooling and IDE state
+.vs/
+tools/

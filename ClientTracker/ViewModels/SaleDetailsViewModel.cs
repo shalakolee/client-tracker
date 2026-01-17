@@ -25,6 +25,7 @@ public class SaleDetailsViewModel : ViewModelBase
         _database = database;
         Contacts = new ObservableCollection<ContactModel>();
         Payments = new ObservableCollection<PaymentEditItem>();
+        RefreshCommand = new Command(async () => await RefreshAsync());
         SaveSaleCommand = new Command(async () => await SaveSaleAsync(), () => SaleId > 0);
         SavePaymentsCommand = new Command(async () => await SavePaymentsAsync(), () => Payments.Count > 0);
         DeleteSaleCommand = new Command(async () => await DeleteSaleAsync(), () => SaleId > 0);
@@ -95,6 +96,7 @@ public class SaleDetailsViewModel : ViewModelBase
     }
 
     public Command SaveSaleCommand { get; }
+    public Command RefreshCommand { get; }
     public Command SavePaymentsCommand { get; }
     public Command DeleteSaleCommand { get; }
 
@@ -132,6 +134,16 @@ public class SaleDetailsViewModel : ViewModelBase
         });
     }
 
+    private Task RefreshAsync()
+    {
+        if (SaleId <= 0)
+        {
+            return Task.CompletedTask;
+        }
+
+        return LoadAsync(SaleId);
+    }
+
     private async Task LoadPaymentsAsync(Sale sale)
     {
         Payments.Clear();
@@ -146,7 +158,7 @@ public class SaleDetailsViewModel : ViewModelBase
                 PayDate = payment.PayDate,
                 Amount = payment.Amount,
                 Commission = payment.Commission,
-                IsPaid = payment.IsPaid,
+                IsPaid = true,
                 PaymentNumber = GetPaymentNumber(sale.SaleDate, payment.PaymentDate)
             });
         }
@@ -218,8 +230,8 @@ public class SaleDetailsViewModel : ViewModelBase
                 PayDate = payDate,
                 Amount = payment.Amount,
                 Commission = commission,
-                IsPaid = payment.IsPaid,
-                PaidDateUtc = payment.IsPaid ? DateTime.UtcNow : null
+                IsPaid = true,
+                PaidDateUtc = DateTime.UtcNow
             });
 
             payment.PayDate = payDate;

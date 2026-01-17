@@ -19,6 +19,7 @@ public class ContactDetailsViewModel : ViewModelBase
     public ContactDetailsViewModel(DatabaseService database)
     {
         _database = database;
+        RefreshCommand = new Command(async () => await RefreshAsync());
         EditCommand = new Command(async () => await EditAsync(), () => ContactId > 0);
         DeleteCommand = new Command(async () => await DeleteAsync(), () => ContactId > 0);
     }
@@ -91,7 +92,6 @@ public class ContactDetailsViewModel : ViewModelBase
 
             var parts = ContactName
                 .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Take(2)
                 .ToArray();
 
             if (parts.Length == 0)
@@ -99,7 +99,7 @@ public class ContactDetailsViewModel : ViewModelBase
                 return "?";
             }
 
-            return string.Concat(parts.Select(p => p.Length > 0 ? char.ToUpperInvariant(p[0]) : '?'));
+            return char.ToUpperInvariant(parts[0][0]).ToString();
         }
     }
 
@@ -110,6 +110,7 @@ public class ContactDetailsViewModel : ViewModelBase
     }
 
     public Command EditCommand { get; }
+    public Command RefreshCommand { get; }
     public Command DeleteCommand { get; }
 
     public async Task LoadAsync(int contactId)
@@ -133,6 +134,16 @@ public class ContactDetailsViewModel : ViewModelBase
             var client = await _database.GetClientByIdAsync(contact.ClientId);
             ClientName = client?.Name ?? string.Empty;
         });
+    }
+
+    private Task RefreshAsync()
+    {
+        if (ContactId <= 0)
+        {
+            return Task.CompletedTask;
+        }
+
+        return LoadAsync(ContactId);
     }
 
     private Task EditAsync()

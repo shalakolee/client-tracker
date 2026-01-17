@@ -17,7 +17,7 @@
   <data name="Nav_Clients" xml:space="preserve"><value>Clients</value></data>
   <data name="Nav_Contacts" xml:space="preserve"><value>Contacts</value></data>
   <data name="Nav_Sales" xml:space="preserve"><value>Sales</value></data>
-  <data name="Nav_PayCalendar" xml:space="preserve"><value>Pay Calendar</value></data>
+  <data name="Nav_PayCalendar" xml:space="preserve"><value>Commission Calendar</value></data>
   <data name="Nav_Settings" xml:space="preserve"><value>Settings</value></data>
   <data name="App_Title" xml:space="preserve"><value>Client Tracker</value></data>
   <data name="App_Subtitle" xml:space="preserve"><value>Client operations workspace</value></data>
@@ -61,8 +61,11 @@
   <data name="Dashboard_MonthCommission" xml:space="preserve"><value>This Month's Commission</value></data>
   <data name="Dashboard_TotalRevenue" xml:space="preserve"><value>Total Revenue</value></data>
   <data name="Dashboard_OutstandingCommission" xml:space="preserve"><value>Outstanding Commission</value></data>
-  <data name="Dashboard_UpcomingCommission" xml:space="preserve"><value>Upcoming Commission (30 days)</value></data>
+  <data name="Dashboard_UpcomingCommission" xml:space="preserve"><value>Commission for {0}</value></data>
+  <data name="Dashboard_SalesCommissionTitle" xml:space="preserve"><value>Sales and Commission</value></data>
   <data name="Dashboard_UpcomingPayments" xml:space="preserve"><value>upcoming payments</value></data>
+  <data name="Dashboard_CommissionMidMonth" xml:space="preserve"><value>15th</value></data>
+  <data name="Dashboard_CommissionEndMonth" xml:space="preserve"><value>End of month</value></data>
   <data name="Dashboard_Trends" xml:space="preserve"><value>Sales and Commission Trend</value></data>
   <data name="Dashboard_Sales" xml:space="preserve"><value>Sales</value></data>
   <data name="Dashboard_Commission" xml:space="preserve"><value>Commission</value></data>
@@ -114,6 +117,7 @@
   <data name="Client_AddressLine2" xml:space="preserve"><value>Address line 2</value></data>
   <data name="Client_City" xml:space="preserve"><value>City</value></data>
   <data name="Client_StateProvince" xml:space="preserve"><value>State/Province</value></data>
+  <data name="Client_CityStatePostal" xml:space="preserve"><value>City / State / Postal</value></data>
   <data name="Client_PostalCode" xml:space="preserve"><value>Postal code</value></data>
   <data name="Client_Country" xml:space="preserve"><value>Country</value></data>
   <data name="Contact_Name" xml:space="preserve"><value>Contact name</value></data>
@@ -124,6 +128,7 @@
   <data name="Sales_Header" xml:space="preserve"><value>Sales Registry</value></data>
   <data name="Sales_Subtitle" xml:space="preserve"><value>Search by client, contact, or invoice number.</value></data>
   <data name="Sales_SearchPlaceholder" xml:space="preserve"><value>Search sales</value></data>
+  <data name="Sales_Filter_HasInvoice" xml:space="preserve"><value>Has invoice</value></data>
   <data name="Sales_Column_Client" xml:space="preserve"><value>Client</value></data>
   <data name="Sales_Column_ContactInvoice" xml:space="preserve"><value>Contact / Invoice</value></data>
   <data name="Sales_Column_Amount" xml:space="preserve"><value>Amount</value></data>
@@ -134,6 +139,7 @@
   <data name="Sale_InvoicePlaceholder" xml:space="preserve"><value>Invoice number</value></data>
   <data name="Sale_AmountPlaceholder" xml:space="preserve"><value>Sale amount</value></data>
   <data name="Sale_CommissionPlaceholder" xml:space="preserve"><value>Commission %</value></data>
+  <data name="Sale_Date" xml:space="preserve"><value>Sale date</value></data>
   <data name="Sale_Contact" xml:space="preserve"><value>Contact</value></data>
   <data name="Sale_Payments" xml:space="preserve"><value>Payments</value></data>
   <data name="Payment_Number" xml:space="preserve"><value>#</value></data>
@@ -148,6 +154,11 @@
   <data name="PayCalendar_Summary" xml:space="preserve"><value>Pay date summary</value></data>
   <data name="PayCalendar_SelectMonth" xml:space="preserve"><value>Select month</value></data>
   <data name="PayCalendar_MonthTotal" xml:space="preserve"><value>Month total</value></data>
+  <data name="PayCalendar_OverviewTitle" xml:space="preserve"><value>Monthly overview</value></data>
+  <data name="PayCalendar_OverviewPayments" xml:space="preserve"><value>Payments</value></data>
+  <data name="PayCalendar_OverviewAverage" xml:space="preserve"><value>Avg commission</value></data>
+  <data name="PayCalendar_OverviewRange" xml:space="preserve"><value>Pay date range</value></data>
+  <data name="PayCalendar_NoRange" xml:space="preserve"><value>No pay dates yet</value></data>
   <data name="PayCalendar_Paid" xml:space="preserve"><value>Paid</value></data>
   <data name="PayCalendar_Unpaid" xml:space="preserve"><value>Unpaid</value></data>
   <data name="PayCalendar_Total" xml:space="preserve"><value>Total</value></data>
@@ -209,6 +220,7 @@
   <data name="Update_NotConfigured" xml:space="preserve"><value>Update source is not configured yet.</value></data>
   <data name="Update_NotFound" xml:space="preserve"><value>No releases found.</value></data>
   <data name="Update_NoUpdate" xml:space="preserve"><value>You already have the latest version.</value></data>
+  <data name="Update_Error" xml:space="preserve"><value>Update check failed. Please try again.</value></data>
   <data name="Update_NoAsset" xml:space="preserve"><value>No compatible installer was found for this platform.</value></data>
   <data name="Update_Available" xml:space="preserve"><value>Version {0} is available. Download and install now?</value></data>
   <data name="Update_Notes" xml:space="preserve"><value>Release notes</value></data>

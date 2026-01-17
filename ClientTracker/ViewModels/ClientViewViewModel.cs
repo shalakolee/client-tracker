@@ -19,6 +19,7 @@ public class ClientViewViewModel : ViewModelBase
     private string _postalCode = string.Empty;
     private string _country = string.Empty;
     private string _taxId = string.Empty;
+    private string _cityStatePostalLine = string.Empty;
     private string _statusMessage = string.Empty;
     private string _locationLine = string.Empty;
     private int _saleCount;
@@ -31,6 +32,7 @@ public class ClientViewViewModel : ViewModelBase
         _database = database;
         Contacts = new ObservableCollection<ContactModel>();
         Sales = new ObservableCollection<SaleEntry>();
+        RefreshCommand = new Command(async () => await RefreshAsync());
         EditCommand = new Command(async () => await OpenEditAsync(), () => ClientId > 0);
         DeleteCommand = new Command(async () => await DeleteClientAsync(), () => ClientId > 0);
         AddContactCommand = new Command(async () => await OpenAddContactAsync(), () => ClientId > 0);
@@ -104,6 +106,12 @@ public class ClientViewViewModel : ViewModelBase
         set => SetProperty(ref _taxId, value);
     }
 
+    public string CityStatePostalLine
+    {
+        get => _cityStatePostalLine;
+        set => SetProperty(ref _cityStatePostalLine, value);
+    }
+
     public string LocationLine
     {
         get => _locationLine;
@@ -144,6 +152,7 @@ public class ClientViewViewModel : ViewModelBase
     }
 
     public Command EditCommand { get; }
+    public Command RefreshCommand { get; }
     public Command DeleteCommand { get; }
     public Command AddContactCommand { get; }
     public Command<ContactModel> ViewContactCommand { get; }
@@ -174,10 +183,21 @@ public class ClientViewViewModel : ViewModelBase
             Country = client.Country;
             TaxId = client.TaxId;
             LocationLine = BuildLocationLine(client);
+            CityStatePostalLine = BuildCityStatePostalLine(client);
 
             await LoadContactsAsync();
             await LoadSalesAsync();
         });
+    }
+
+    private Task RefreshAsync()
+    {
+        if (ClientId <= 0)
+        {
+            return Task.CompletedTask;
+        }
+
+        return LoadAsync(ClientId);
     }
 
     private async Task LoadContactsAsync()
@@ -200,9 +220,9 @@ public class ClientViewViewModel : ViewModelBase
         {
             var contactName = Contacts.FirstOrDefault(c => c.Id == sale.ContactId)?.Name ?? string.Empty;
             var salePayments = payments.Where(p => p.SaleId == sale.Id).ToList();
-            var paidCount = salePayments.Count(p => p.IsPaid);
             var totalCount = salePayments.Count;
-            var progress = totalCount == 0 ? 0 : (double)paidCount / totalCount;
+            var paidCount = totalCount;
+            var progress = totalCount == 0 ? 0 : 1d;
 
             Sales.Add(new SaleEntry
             {
@@ -222,7 +242,7 @@ public class ClientViewViewModel : ViewModelBase
         SaleCount = Sales.Count;
         TotalSaleAmount = Sales.Sum(s => s.Amount);
         TotalCommissionAmount = Sales.Sum(s => s.Amount * (s.CommissionPercent / 100m));
-        OutstandingCommissionAmount = payments.Where(p => !p.IsPaid).Sum(p => p.Commission);
+        OutstandingCommissionAmount = 0m;
     }
 
     private async Task OpenEditAsync()
@@ -350,5 +370,26 @@ public class ClientViewViewModel : ViewModelBase
         }
 
         return location;
+    }
+
+    private static string BuildCityStatePostalLine(Client client)
+    {
+        var parts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(client.City))
+        {
+            parts.Add(client.City.Trim());
+        }
+
+        if (!string.IsNullOrWhiteSpace(client.StateProvince))
+        {
+            parts.Add(client.StateProvince.Trim());
+        }
+
+        if (!string.IsNullOrWhiteSpace(client.PostalCode))
+        {
+            parts.Add(client.PostalCode.Trim());
+        }
+
+        return string.Join(", ", parts.Where(p => !string.IsNullOrWhiteSpace(p)));
     }
 }

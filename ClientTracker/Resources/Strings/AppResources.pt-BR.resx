@@ -17,7 +17,7 @@
   <data name="Nav_Clients" xml:space="preserve"><value>Clientes</value></data>
   <data name="Nav_Contacts" xml:space="preserve"><value>Contatos</value></data>
   <data name="Nav_Sales" xml:space="preserve"><value>Vendas</value></data>
-  <data name="Nav_PayCalendar" xml:space="preserve"><value>Calendario de Pagamentos</value></data>
+  <data name="Nav_PayCalendar" xml:space="preserve"><value>Calendario de Comissao</value></data>
   <data name="Nav_Settings" xml:space="preserve"><value>Configuracoes</value></data>
   <data name="App_Title" xml:space="preserve"><value>Controle de Clientes</value></data>
   <data name="App_Subtitle" xml:space="preserve"><value>Central de operacoes do cliente</value></data>
@@ -61,8 +61,11 @@
   <data name="Dashboard_MonthCommission" xml:space="preserve"><value>Comissao do Mes</value></data>
   <data name="Dashboard_TotalRevenue" xml:space="preserve"><value>Receita total</value></data>
   <data name="Dashboard_OutstandingCommission" xml:space="preserve"><value>Comissao em aberto</value></data>
-  <data name="Dashboard_UpcomingCommission" xml:space="preserve"><value>Comissao proximos 30 dias</value></data>
+  <data name="Dashboard_UpcomingCommission" xml:space="preserve"><value>Comissao de {0}</value></data>
+  <data name="Dashboard_SalesCommissionTitle" xml:space="preserve"><value>Vendas e comissao</value></data>
   <data name="Dashboard_UpcomingPayments" xml:space="preserve"><value>pagamentos proximos</value></data>
+  <data name="Dashboard_CommissionMidMonth" xml:space="preserve"><value>Dia 15</value></data>
+  <data name="Dashboard_CommissionEndMonth" xml:space="preserve"><value>Fim do mes</value></data>
   <data name="Dashboard_Trends" xml:space="preserve"><value>Tendencia de vendas e comissao</value></data>
   <data name="Dashboard_Sales" xml:space="preserve"><value>Vendas</value></data>
   <data name="Dashboard_Commission" xml:space="preserve"><value>Comissao</value></data>
@@ -114,6 +117,7 @@
   <data name="Client_AddressLine2" xml:space="preserve"><value>Endereco linha 2</value></data>
   <data name="Client_City" xml:space="preserve"><value>Cidade</value></data>
   <data name="Client_StateProvince" xml:space="preserve"><value>Estado/Provincia</value></data>
+  <data name="Client_CityStatePostal" xml:space="preserve"><value>Cidade / Estado / CEP</value></data>
   <data name="Client_PostalCode" xml:space="preserve"><value>CEP</value></data>
   <data name="Client_Country" xml:space="preserve"><value>Pais</value></data>
   <data name="Contact_Name" xml:space="preserve"><value>Nome do contato</value></data>
@@ -124,6 +128,7 @@
   <data name="Sales_Header" xml:space="preserve"><value>Registro de Vendas</value></data>
   <data name="Sales_Subtitle" xml:space="preserve"><value>Pesquise por cliente, contato ou nota.</value></data>
   <data name="Sales_SearchPlaceholder" xml:space="preserve"><value>Pesquisar vendas</value></data>
+  <data name="Sales_Filter_HasInvoice" xml:space="preserve"><value>Com nota</value></data>
   <data name="Sales_Column_Client" xml:space="preserve"><value>Cliente</value></data>
   <data name="Sales_Column_ContactInvoice" xml:space="preserve"><value>Contato / Nota</value></data>
   <data name="Sales_Column_Amount" xml:space="preserve"><value>Valor</value></data>
@@ -134,6 +139,7 @@
   <data name="Sale_InvoicePlaceholder" xml:space="preserve"><value>Numero da nota</value></data>
   <data name="Sale_AmountPlaceholder" xml:space="preserve"><value>Valor da venda</value></data>
   <data name="Sale_CommissionPlaceholder" xml:space="preserve"><value>Comissao %</value></data>
+  <data name="Sale_Date" xml:space="preserve"><value>Data da venda</value></data>
   <data name="Sale_Contact" xml:space="preserve"><value>Contato</value></data>
   <data name="Sale_Payments" xml:space="preserve"><value>Pagamentos</value></data>
   <data name="Payment_Number" xml:space="preserve"><value>#</value></data>
@@ -148,6 +154,11 @@
   <data name="PayCalendar_Summary" xml:space="preserve"><value>Resumo de pagamentos</value></data>
   <data name="PayCalendar_SelectMonth" xml:space="preserve"><value>Selecionar mes</value></data>
   <data name="PayCalendar_MonthTotal" xml:space="preserve"><value>Total do mes</value></data>
+  <data name="PayCalendar_OverviewTitle" xml:space="preserve"><value>Visao mensal</value></data>
+  <data name="PayCalendar_OverviewPayments" xml:space="preserve"><value>Pagamentos</value></data>
+  <data name="PayCalendar_OverviewAverage" xml:space="preserve"><value>Comissao media</value></data>
+  <data name="PayCalendar_OverviewRange" xml:space="preserve"><value>Intervalo de repasse</value></data>
+  <data name="PayCalendar_NoRange" xml:space="preserve"><value>Sem datas de repasse</value></data>
   <data name="PayCalendar_Paid" xml:space="preserve"><value>Pago</value></data>
   <data name="PayCalendar_Unpaid" xml:space="preserve"><value>Em aberto</value></data>
   <data name="PayCalendar_Total" xml:space="preserve"><value>Total</value></data>
@@ -209,6 +220,7 @@
   <data name="Update_NotConfigured" xml:space="preserve"><value>Fonte de atualizacao ainda nao configurada.</value></data>
   <data name="Update_NotFound" xml:space="preserve"><value>Nenhuma release encontrada.</value></data>
   <data name="Update_NoUpdate" xml:space="preserve"><value>Voce ja tem a versao mais recente.</value></data>
+  <data name="Update_Error" xml:space="preserve"><value>Falha ao verificar atualizacoes. Tente novamente.</value></data>
   <data name="Update_NoAsset" xml:space="preserve"><value>Nenhum instalador compativel foi encontrado para esta plataforma.</value></data>
   <data name="Update_Available" xml:space="preserve"><value>A versao {0} esta disponivel. Baixar e instalar agora?</value></data>
   <data name="Update_Notes" xml:space="preserve"><value>Notas da release</value></data>

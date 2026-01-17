@@ -41,7 +41,7 @@ public class SettingsViewModel : ViewModelBase
         RefreshDiagnosticsCommand = new Command(async () => await RefreshDiagnosticsAsync());
         SaveDatabaseConnectionCommand = new Command(async () => await SaveDatabaseConnectionAsync());
         TestDatabaseConnectionCommand = new Command(async () => await TestDatabaseConnectionAsync());
-        CheckUpdatesCommand = new Command(async () => await _updateService.CheckForUpdatesAsync(true));
+        CheckUpdatesCommand = new Command(async () => await CheckUpdatesAsync());
         LoadUpdateSettings();
         _ = LoadDatabaseConnectionAsync();
         _ = RefreshDiagnosticsAsync();
@@ -179,6 +179,25 @@ public class SettingsViewModel : ViewModelBase
         DatabasePath = _database.DatabasePath;
         var count = await _database.GetActiveClientCountAsync();
         ActiveClientCount = count.ToString();
+    }
+
+    private async Task CheckUpdatesAsync()
+    {
+        try
+        {
+            await _updateService.CheckForUpdatesAsync(true);
+        }
+        catch (Exception ex)
+        {
+            StartupLog.Write(ex, "UpdateService.CheckUpdates");
+            var title = _localization["Update_Title"];
+            var message = _localization["Update_Error"];
+            var ok = _localization["Update_Ok"];
+            if (Shell.Current is not null)
+            {
+                await Shell.Current.DisplayAlertAsync(title, message, ok);
+            }
+        }
     }
 
     private async Task LoadDatabaseConnectionAsync()

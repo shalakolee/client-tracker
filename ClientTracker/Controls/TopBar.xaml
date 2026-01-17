@@ -6,18 +6,45 @@
     xmlns:services="clr-namespace:ClientTracker.Services"
     x:Name="Root">
     <Grid Padding="{StaticResource PagePadding}" RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
-        <Border WidthRequest="40" HeightRequest="40" BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource Gray950}}" Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource Gray600}}" StrokeThickness="1" VerticalOptions="Center">
-            <Border.StrokeShape>
-                <RoundRectangle CornerRadius="14" />
-            </Border.StrokeShape>
+        <Grid WidthRequest="40" HeightRequest="40" VerticalOptions="Center">
+            <Grid.Triggers>
+                <DataTrigger TargetType="Grid" Binding="{Binding NavigationMode, Source={x:Reference Root}}" Value="None">
+                    <Setter Property="IsVisible" Value="False" />
+                </DataTrigger>
+            </Grid.Triggers>
             <ImageButton
                 BackgroundColor="Transparent"
-                Clicked="OnMenuClicked"
-                Source="{OnPlatform WinUI=nav_dashboard_win.png, Default=nav_dashboard}"
+                Clicked="OnNavigationClicked"
+                Source="icon_menu"
                 Padding="10"
                 WidthRequest="40"
-                HeightRequest="40" />
-        </Border>
+                HeightRequest="40"
+                IsVisible="False">
+                <ImageButton.Triggers>
+                    <DataTrigger TargetType="ImageButton" Binding="{Binding NavigationMode, Source={x:Reference Root}}" Value="Menu">
+                        <Setter Property="IsVisible" Value="True" />
+                    </DataTrigger>
+                    <DataTrigger TargetType="ImageButton" Binding="{Binding IsMenuAvailable, Source={x:Reference Root}}" Value="False">
+                        <Setter Property="IsVisible" Value="False" />
+                    </DataTrigger>
+                </ImageButton.Triggers>
+            </ImageButton>
+
+            <ImageButton
+                BackgroundColor="Transparent"
+                Clicked="OnNavigationClicked"
+                Source="icon_back"
+                Padding="10"
+                WidthRequest="40"
+                HeightRequest="40"
+                IsVisible="False">
+                <ImageButton.Triggers>
+                    <DataTrigger TargetType="ImageButton" Binding="{Binding NavigationMode, Source={x:Reference Root}}" Value="Back">
+                        <Setter Property="IsVisible" Value="True" />
+                    </DataTrigger>
+                </ImageButton.Triggers>
+            </ImageButton>
+        </Grid>
 
         <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
             <Label Text="{Binding Title, Source={x:Reference Root}}" FontSize="22" FontFamily="OpenSansSemibold" />
@@ -25,13 +52,26 @@
         </VerticalStackLayout>
 
         <HorizontalStackLayout Grid.Column="2" Spacing="8" VerticalOptions="Center" HorizontalOptions="End">
+            <ImageButton
+                x:Name="SearchToggleButton"
+                BackgroundColor="Transparent"
+                Clicked="OnSearchToggleClicked"
+                Source="icon_search"
+                Padding="10"
+                WidthRequest="40"
+                HeightRequest="40"
+                IsVisible="False" />
             <Button
                 Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Update_Title]}"
                 Style="{StaticResource InlineButton}"
                 IsVisible="{Binding Source={x:Static services:UpdateService.Instance}, Path=IsUpdateAvailable}"
                 Clicked="OnUpdateClicked" />
             <ContentPresenter Content="{Binding RightContent, Source={x:Reference Root}}" />
-                <Border WidthRequest="38" HeightRequest="38" BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAlt}, Dark={StaticResource Gray950}}" StrokeThickness="0" VerticalOptions="Center">
+            <Border WidthRequest="38" HeightRequest="38"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAlt}, Dark={StaticResource Gray950}}"
+                    StrokeThickness="0"
+                    VerticalOptions="Center"
+                    IsVisible="{OnIdiom Phone=False, Default=True}">
                 <Border.StrokeShape>
                     <RoundRectangle CornerRadius="999" />
                 </Border.StrokeShape>
@@ -39,22 +79,10 @@
             </Border>
         </HorizontalStackLayout>
 
-        <Border Grid.Row="1" Grid.ColumnSpan="3"
-                IsVisible="{Binding IsSearchVisible, Source={x:Reference Root}}"
-                BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource Gray950}}"
-                Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource Gray600}}"
-                StrokeThickness="1"
-                Padding="12,10">
-            <Border.StrokeShape>
-                <RoundRectangle CornerRadius="14" />
-            </Border.StrokeShape>
-            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                <Image Source="{OnPlatform WinUI=nav_sales_win.png, Default=nav_sales}" WidthRequest="18" HeightRequest="18" Opacity="0.7" VerticalOptions="Center" />
-                <Entry Grid.Column="1"
-                       Placeholder="{Binding SearchPlaceholder, Source={x:Reference Root}}"
-                       Text="{Binding SearchText, Source={x:Reference Root}, Mode=TwoWay}"
-                       BackgroundColor="Transparent" />
-            </Grid>
-        </Border>
+        <SearchBar x:Name="SearchInput" Grid.Row="1" Grid.ColumnSpan="3"
+                   IsVisible="{Binding IsSearchVisible, Source={x:Reference Root}}"
+                   Placeholder="{Binding SearchPlaceholder, Source={x:Reference Root}}"
+                   Text="{Binding SearchText, Source={x:Reference Root}, Mode=TwoWay}"
+                   SearchCommand="{Binding SearchCommand, Source={x:Reference Root}}" />
     </Grid>
 </ContentView>

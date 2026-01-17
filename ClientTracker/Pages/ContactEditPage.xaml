@@ -16,7 +16,7 @@
     </ContentPage.Background>
 
     <Grid RowDefinitions="Auto,*">
-        <controls:TopBar
+        <controls:TopBar NavigationMode="Back"
             Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Title_ContactEdit]}"
             Subtitle="{Binding SelectedClient.Name}">
             <controls:TopBar.RightContent>
@@ -29,35 +29,53 @@
 
         <ScrollView Grid.Row="1">
             <VerticalStackLayout Padding="{StaticResource PagePadding}" Spacing="16">
-            <Frame Style="{StaticResource CardFrame}">
-                <VerticalStackLayout Spacing="10">
+            <Border BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource Gray950}}" StrokeThickness="0" Padding="16">
+            <Border.StrokeShape>
+                <RoundRectangle CornerRadius="20" />
+            </Border.StrokeShape>
+                <VerticalStackLayout Spacing="12">
                     <VerticalStackLayout Spacing="6">
                         <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Title_Clients]}" Style="{StaticResource MutedLabel}" />
-                        <Picker
-                            Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Title_Clients]}"
-                            ItemsSource="{Binding Clients}"
-                            ItemDisplayBinding="{Binding Name}"
-                            SelectedItem="{Binding SelectedClient}"
-                            IsVisible="{Binding CanSelectClient}" />
-                        <Border
-                            BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAlt}, Dark={StaticResource Gray900}}"
-                            StrokeThickness="0"
-                            Padding="12,10"
-                            IsVisible="{Binding CanSelectClient, Converter={StaticResource InverseBoolConverter}}">
-                            <Border.StrokeShape>
-                                <RoundRectangle CornerRadius="14" />
-                            </Border.StrokeShape>
+                        <Border Style="{StaticResource FormFieldContainer}" IsVisible="{Binding CanSelectClient}">
+                            <Picker
+                                Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Title_Clients]}"
+                                ItemsSource="{Binding Clients}"
+                                ItemDisplayBinding="{Binding Name}"
+                                SelectedItem="{Binding SelectedClient}"
+                                Style="{StaticResource FormFieldPicker}" />
+                        </Border>
+                        <Border Style="{StaticResource FormFieldContainer}" IsVisible="{Binding CanSelectClient, Converter={StaticResource InverseBoolConverter}}">
                             <Label Text="{Binding SelectedClient.Name}" />
                         </Border>
                     </VerticalStackLayout>
                     <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
-                        <Entry Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Contact_Name]}" Text="{Binding Name}" />
-                        <Entry Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Contact_Phone]}" Keyboard="Telephone" Text="{Binding Phone}" Grid.Column="1" />
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Contact_Name]}" Style="{StaticResource MutedLabel}" />
+                            <Border Style="{StaticResource FormFieldContainer}">
+                                <Entry Text="{Binding Name}" Style="{StaticResource FormFieldEntry}" />
+                            </Border>
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Grid.Column="1" Spacing="6">
+                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Contact_Phone]}" Style="{StaticResource MutedLabel}" />
+                            <Border Style="{StaticResource FormFieldContainer}">
+                                <Entry Keyboard="Telephone" Text="{Binding Phone}" Style="{StaticResource FormFieldEntry}" />
+                            </Border>
+                        </VerticalStackLayout>
                     </Grid>
-                    <Entry Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Contact_Email]}" Keyboard="Email" Text="{Binding Email}" />
-                    <Editor Placeholder="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Contact_Notes]}" Text="{Binding Notes}" AutoSize="TextChanges" />
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Contact_Email]}" Style="{StaticResource MutedLabel}" />
+                        <Border Style="{StaticResource FormFieldContainer}">
+                            <Entry Keyboard="Email" Text="{Binding Email}" Style="{StaticResource FormFieldEntry}" />
+                        </Border>
+                    </VerticalStackLayout>
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Contact_Notes]}" Style="{StaticResource MutedLabel}" />
+                        <Border Style="{StaticResource FormFieldContainer}">
+                            <Editor Text="{Binding Notes}" AutoSize="TextChanges" Style="{StaticResource FormFieldEditor}" />
+                        </Border>
+                    </VerticalStackLayout>
                 </VerticalStackLayout>
-            </Frame>
+            </Border>
 
             <Label Text="{Binding StatusMessage}" TextColor="{StaticResource Tertiary}" />
             </VerticalStackLayout>
@@ -65,5 +83,8 @@
         <controls:LoadingOverlay Grid.RowSpan="2" ZIndex="99" />
     </Grid>
 </ContentPage>
+
+
+
 
 

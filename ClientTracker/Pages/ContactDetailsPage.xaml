@@ -12,7 +12,7 @@
     </ContentPage.Background>
 
     <Grid RowDefinitions="Auto,*">
-        <controls:TopBar Title="{Binding ContactName}" Subtitle="{Binding ClientName}">
+        <controls:TopBar NavigationMode="Back" Title="{Binding ContactName}" Subtitle="{Binding ClientName}">
             <controls:TopBar.RightContent>
                 <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
                     <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Edit]}" Command="{Binding EditCommand}" Style="{StaticResource SecondaryButton}" />
@@ -21,8 +21,16 @@
             </controls:TopBar.RightContent>
         </controls:TopBar>
 
-        <ScrollView Grid.Row="1">
-            <VerticalStackLayout Padding="{StaticResource PagePadding}" Spacing="16">
+        <RefreshView Grid.Row="1" Command="{Binding RefreshCommand}" IsRefreshing="{Binding IsBusy}">
+            <ScrollView>
+                <VerticalStackLayout Padding="{StaticResource PagePadding}" Spacing="16">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Title_ContactDetails]}" Style="{StaticResource SectionTitle}" />
+                <Button Grid.Column="1"
+                        Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Edit]}"
+                        Command="{Binding EditCommand}"
+                        Style="{StaticResource InlineButton}" />
+            </Grid>
             <Frame Style="{StaticResource CardFrame}">
                 <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14">
                     <Border WidthRequest="52" HeightRequest="52" BackgroundColor="{AppThemeBinding Light=#EEF2FF, Dark={StaticResource Gray900}}" StrokeThickness="0" VerticalOptions="Start">
@@ -64,10 +72,13 @@
             </Frame>
 
             <Label Text="{Binding StatusMessage}" TextColor="{StaticResource Tertiary}" />
-            </VerticalStackLayout>
-        </ScrollView>
+                </VerticalStackLayout>
+            </ScrollView>
+        </RefreshView>
         <controls:LoadingOverlay Grid.RowSpan="2" ZIndex="99" />
     </Grid>
 </ContentPage>
+
+
 
 

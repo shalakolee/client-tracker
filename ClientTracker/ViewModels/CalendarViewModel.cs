@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,17 +19,11 @@ public class CalendarViewModel : ViewModelBase
     private DateTime _selectedMonth;
     private DateTime _monthPickerDate;
     private decimal _monthTotal;
+    private int _monthPaymentCount;
+    private decimal _averageCommission;
+    private string _payDateRangeText = string.Empty;
     private string _statusMessage = string.Empty;
-    private CalendarDay? _selectedCalendarDay;
-    private string _selectedPayDateLabel = LocalizationResourceManager.Instance["PayCalendar_SelectDatePrompt"];
-    private decimal _paidCommissionTotal;
-    private decimal _unpaidCommissionTotal;
-    private int _paidPaymentCount;
-    private int _unpaidPaymentCount;
-    private IReadOnlyList<PayDateSummary> _paySummaries = Array.Empty<PayDateSummary>();
-    private IReadOnlyList<PaymentScheduleItem> _paymentSchedule = Array.Empty<PaymentScheduleItem>();
-    private IReadOnlyList<CalendarDay> _calendarDays = Array.Empty<CalendarDay>();
-    private IReadOnlyList<PaymentScheduleItem> _selectedPayDatePayments = Array.Empty<PaymentScheduleItem>();
+    private IReadOnlyList<PayDateGroup> _payDateGroups = Array.Empty<PayDateGroup>();
 
     public CalendarViewModel(DatabaseService database)
     {
@@ -39,7 +34,7 @@ public class CalendarViewModel : ViewModelBase
         PreviousMonthCommand = new Command(async () => await ShiftMonthAsync(-1));
         NextMonthCommand = new Command(async () => await ShiftMonthAsync(1));
         RefreshCommand = new Command(async () => await LoadAsync());
-        SelectDayCommand = new Command<CalendarDay>(day => SelectedCalendarDay = day);
+        TogglePayDateCommand = new Command<PayDateGroup>(TogglePayDate);
 
         MainThread.BeginInvokeOnMainThread(() =>
         {
@@ -53,28 +48,10 @@ public class CalendarViewModel : ViewModelBase
         });
     }
 
-    public IReadOnlyList<PayDateSummary> PaySummaries
+    public IReadOnlyList<PayDateGroup> PayDateGroups
     {
-        get => _paySummaries;
-        private set => SetProperty(ref _paySummaries, value);
-    }
-
-    public IReadOnlyList<PaymentScheduleItem> PaymentSchedule
-    {
-        get => _paymentSchedule;
-        private set => SetProperty(ref _paymentSchedule, value);
-    }
-
-    public IReadOnlyList<CalendarDay> CalendarDays
-    {
-        get => _calendarDays;
-        private set => SetProperty(ref _calendarDays, value);
-    }
-
-    public IReadOnlyList<PaymentScheduleItem> SelectedPayDatePayments
-    {
-        get => _selectedPayDatePayments;
-        private set => SetProperty(ref _selectedPayDatePayments, value);
+        get => _payDateGroups;
+        private set => SetProperty(ref _payDateGroups, value);
     }
 
     public DateTime SelectedMonth
@@ -115,6 +92,24 @@ public class CalendarViewModel : ViewModelBase
         set => SetProperty(ref _monthTotal, value);
     }
 
+    public int MonthPaymentCount
+    {
+        get => _monthPaymentCount;
+        set => SetProperty(ref _monthPaymentCount, value);
+    }
+
+    public decimal AverageCommission
+    {
+        get => _averageCommission;
+        set => SetProperty(ref _averageCommission, value);
+    }
+
+    public string PayDateRangeText
+    {
+        get => _payDateRangeText;
+        set => SetProperty(ref _payDateRangeText, value);
+    }
+
     public string StatusMessage
     {
         get => _statusMessage;
@@ -123,64 +118,18 @@ public class CalendarViewModel : ViewModelBase
 
     public string MonthLabel => SelectedMonth.ToString("MMMM yyyy");
 
-    public CalendarDay? SelectedCalendarDay
-    {
-        get => _selectedCalendarDay;
-        set
-        {
-            if (value is not null && !value.IsPayDate)
-            {
-                SetProperty(ref _selectedCalendarDay, null);
-                UpdateSelectedPayDatePayments();
-                return;
-            }
-
-            if (SetProperty(ref _selectedCalendarDay, value))
-            {
-                UpdateSelectedDaySelection();
-                UpdateSelectedPayDatePayments();
-            }
-        }
-    }
-
-    public string SelectedPayDateLabel
-    {
-        get => _selectedPayDateLabel;
-        set => SetProperty(ref _selectedPayDateLabel, value);
-    }
-
-    public decimal PaidCommissionTotal
-    {
-        get => _paidCommissionTotal;
-        set => SetProperty(ref _paidCommissionTotal, value);
-    }
-
-    public decimal UnpaidCommissionTotal
-    {
-        get => _unpaidCommissionTotal;
-        set => SetProperty(ref _unpaidCommissionTotal, value);
-    }
-
-    public int PaidPaymentCount
-    {
-        get => _paidPaymentCount;
-        set => SetProperty(ref _paidPaymentCount, value);
-    }
-
-    public int UnpaidPaymentCount
-    {
-        get => _unpaidPaymentCount;
-        set => SetProperty(ref _unpaidPaymentCount, value);
-    }
-
     public Command PreviousMonthCommand { get; }
     public Command NextMonthCommand { get; }
     public Command RefreshCommand { get; }
-    public Command<CalendarDay> SelectDayCommand { get; }
+    public Command<PayDateGroup> TogglePayDateCommand { get; }
 
     public async Task LoadAsync()
     {
-        await _loadGate.WaitAsync();
+        if (!await _loadGate.WaitAsync(0))
+        {
+            return;
+        }
+
         try
         {
             var month = SelectedMonth;
@@ -196,36 +145,30 @@ public class CalendarViewModel : ViewModelBase
             var sales = await _database.GetAllSalesAsync().ConfigureAwait(false);
             var clients = await _database.GetClientsAsync().ConfigureAwait(false);
             var contacts = await _database.GetAllContactsAsync().ConfigureAwait(false);
+            var expandedDates = PayDateGroups
+                .Where(group => group.IsExpanded)
+                .Select(group => group.PayDate.Date)
+                .ToHashSet();
 
             var result = await Task.Run(() =>
             {
-                var summaries = BuildPaySummaries(payments);
                 var scheduleItems = BuildScheduleItems(payments, sales, clients, contacts);
-                var calendarDays = BuildCalendarDays(month, payments);
-                var monthTotal = summaries.Sum(s => s.TotalCommission);
-                return (summaries, scheduleItems, calendarDays, monthTotal);
+                var groups = BuildPayDateGroups(scheduleItems, expandedDates);
+                var monthTotal = groups.Sum(g => g.TotalCommission);
+                var paymentCount = scheduleItems.Count;
+                var averageCommission = paymentCount == 0 ? 0m : monthTotal / paymentCount;
+                var rangeText = BuildRangeText(scheduleItems);
+                return (groups, monthTotal, paymentCount, averageCommission, rangeText);
             }).ConfigureAwait(false);
 
             await MainThread.InvokeOnMainThreadAsync(() =>
             {
-                PaySummaries = result.summaries;
-                PaymentSchedule = result.scheduleItems;
-                CalendarDays = result.calendarDays;
+                PayDateGroups = result.groups;
                 MonthTotal = result.monthTotal;
+                MonthPaymentCount = result.paymentCount;
+                AverageCommission = result.averageCommission;
+                PayDateRangeText = result.rangeText;
                 OnPropertyChanged(nameof(MonthLabel));
-
-                if (SelectedCalendarDay is not null)
-                {
-                    var selectedDate = SelectedCalendarDay.Date.Date;
-                    SelectedCalendarDay = CalendarDays.FirstOrDefault(d => d.Date.Date == selectedDate);
-                }
-                else
-                {
-                    SelectedCalendarDay = CalendarDays.FirstOrDefault(d => d.IsPayDate);
-                }
-
-                UpdateSelectedPayDatePayments();
-                RecalculateTotals();
 
                 if (payments.Count == 0)
                 {
@@ -252,7 +195,7 @@ public class CalendarViewModel : ViewModelBase
                 }
             }
 
-            StartupLog.Write($"CalendarViewModel.LoadAsync done payments={payments.Count} schedule={result.scheduleItems.Count} days={result.calendarDays.Count}");
+            StartupLog.Write($"CalendarViewModel.LoadAsync done payments={payments.Count} groups={result.groups.Count}");
         }
         catch (Exception ex)
         {
@@ -272,18 +215,67 @@ public class CalendarViewModel : ViewModelBase
         await LoadAsync();
     }
 
-    private static List<PayDateSummary> BuildPaySummaries(IEnumerable<Payment> payments)
+    private void TogglePayDate(PayDateGroup? group)
     {
-        return payments
-            .GroupBy(p => p.PayDate)
-            .OrderBy(g => g.Key)
-            .Select(g => new PayDateSummary
+        if (group is null)
+        {
+            return;
+        }
+
+        group.IsExpanded = !group.IsExpanded;
+    }
+
+    private static List<PayDateGroup> BuildPayDateGroups(IReadOnlyList<PaymentScheduleItem> scheduleItems, ISet<DateTime> expandedDates)
+    {
+        return scheduleItems
+            .GroupBy(item => item.PayDate.Date)
+            .OrderBy(group => group.Key)
+            .Select(group =>
             {
-                PayDate = g.Key,
-                TotalCommission = g.Sum(p => p.Commission),
-                PaymentCount = g.Count()
+                var payments = group
+                    .OrderBy(item => item.ClientName)
+                    .ThenBy(item => item.PaymentDate)
+                    .ToList();
+
+                return new PayDateGroup
+                {
+                    PayDate = group.Key,
+                    TotalCommission = group.Sum(item => item.Commission),
+                    PaymentCount = group.Count(),
+                    Payments = payments,
+                    IsExpanded = expandedDates.Contains(group.Key)
+                };
             })
             .ToList();
+    }
+
+    private static string BuildRangeText(IReadOnlyList<PaymentScheduleItem> scheduleItems)
+    {
+        if (scheduleItems.Count == 0)
+        {
+            return LocalizationResourceManager.Instance["PayCalendar_NoRange"];
+        }
+
+        var minDate = scheduleItems.Min(item => item.PayDate.Date);
+        var maxDate = scheduleItems.Max(item => item.PayDate.Date);
+        var culture = CultureInfo.CurrentCulture;
+
+        if (minDate == maxDate)
+        {
+            return minDate.ToString("MMM d, yyyy", culture);
+        }
+
+        if (minDate.Year == maxDate.Year)
+        {
+            if (minDate.Month == maxDate.Month)
+            {
+                return $"{minDate.ToString("MMM d", culture)} - {maxDate.ToString("MMM d, yyyy", culture)}";
+            }
+
+            return $"{minDate.ToString("MMM d", culture)} - {maxDate.ToString("MMM d, yyyy", culture)}";
+        }
+
+        return $"{minDate.ToString("MMM d, yyyy", culture)} - {maxDate.ToString("MMM d, yyyy", culture)}";
     }
 
     private static List<PaymentScheduleItem> BuildScheduleItems(IEnumerable<Payment> payments, IEnumerable<Sale> sales, IEnumerable<Client> clients, IEnumerable<ContactModel> contacts)
@@ -319,63 +311,10 @@ public class CalendarViewModel : ViewModelBase
                 SaleAmount = sale?.Amount ?? 0m,
                 PaymentAmount = payment.Amount,
                 Commission = payment.Commission,
-                IsPaid = payment.IsPaid,
+                IsPaid = true,
                 PaidDateUtc = payment.PaidDateUtc
             };
         }).OrderBy(p => p.PayDate).ThenBy(p => p.PaymentDate).ToList();
-    }
-
-    public async Task UpdatePaymentStatusAsync(PaymentScheduleItem item)
-    {
-        var payment = new Payment
-        {
-            Id = item.PaymentId,
-            IsPaid = item.IsPaid,
-            PaidDateUtc = item.IsPaid ? DateTime.UtcNow : null
-        };
-
-        await _database.UpdatePaymentAsync(payment);
-        item.PaidDateUtc = payment.PaidDateUtc;
-        RecalculateTotals();
-    }
-
-    private void UpdateSelectedPayDatePayments()
-    {
-        if (SelectedCalendarDay is null || SelectedCalendarDay.CommissionTotal <= 0m)
-        {
-            SelectedPayDateLabel = LocalizationResourceManager.Instance["PayCalendar_SelectDatePrompt"];
-            SelectedPayDatePayments = Array.Empty<PaymentScheduleItem>();
-            return;
-        }
-
-        var selectedDate = SelectedCalendarDay.Date.Date;
-        var matches = PaymentSchedule
-            .Where(p => p.PayDate.Date == selectedDate)
-            .OrderBy(p => p.ClientName)
-            .ThenBy(p => p.PaymentDate)
-            .ToList();
-
-        SelectedPayDatePayments = matches;
-
-        var labelTemplate = LocalizationResourceManager.Instance["PayCalendar_SelectedDatePayments"];
-        SelectedPayDateLabel = string.Format(labelTemplate, selectedDate.ToString("MMMM dd, yyyy"));
-    }
-
-    private void RecalculateTotals()
-    {
-        PaidCommissionTotal = PaymentSchedule.Where(p => p.IsPaid).Sum(p => p.Commission);
-        UnpaidCommissionTotal = PaymentSchedule.Where(p => !p.IsPaid).Sum(p => p.Commission);
-        PaidPaymentCount = PaymentSchedule.Count(p => p.IsPaid);
-        UnpaidPaymentCount = PaymentSchedule.Count(p => !p.IsPaid);
-    }
-
-    private void UpdateSelectedDaySelection()
-    {
-        var selectedDate = SelectedCalendarDay?.Date.Date;
-        foreach (var day in CalendarDays)
-        {
-            day.IsSelected = selectedDate.HasValue && day.Date.Date == selectedDate.Value;
-        }
     }
 
     private static int GetPaymentNumber(DateTime saleDate, DateTime paymentDate)
@@ -388,37 +327,5 @@ public class CalendarViewModel : ViewModelBase
             35 => 3,
             _ => 0
         };
-    }
-
-    private static List<CalendarDay> BuildCalendarDays(DateTime month, IEnumerable<Payment> payments)
-    {
-        var firstDay = new DateTime(month.Year, month.Month, 1);
-        var startOffset = (int)firstDay.DayOfWeek;
-        var startDate = firstDay.AddDays(-startOffset);
-        var paymentTotals = payments
-            .GroupBy(p => p.PayDate.Date)
-            .ToDictionary(g => g.Key, g => new
-            {
-                Total = g.Sum(p => p.Commission),
-                Count = g.Count()
-            });
-
-        var days = new List<CalendarDay>();
-        for (var i = 0; i < 42; i++)
-        {
-            var date = startDate.AddDays(i);
-            paymentTotals.TryGetValue(date.Date, out var summary);
-            days.Add(new CalendarDay
-            {
-                Date = date,
-                DayLabel = date.Day.ToString(),
-                IsCurrentMonth = date.Month == month.Month,
-                CommissionTotal = summary?.Total ?? 0m,
-                PaymentCount = summary?.Count ?? 0,
-                IsPayDate = summary is not null
-            });
-        }
-
-        return days;
     }
 }
