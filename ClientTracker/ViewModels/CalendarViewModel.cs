@@ -22,6 +22,8 @@ public class CalendarViewModel : ViewModelBase
     private int _monthPaymentCount;
     private decimal _averageCommission;
     private string _payDateRangeText = string.Empty;
+    private int _payDateCount;
+    private string _nextPayDateText = string.Empty;
     private string _statusMessage = string.Empty;
     private IReadOnlyList<PayDateGroup> _payDateGroups = Array.Empty<PayDateGroup>();
 
@@ -110,6 +112,18 @@ public class CalendarViewModel : ViewModelBase
         set => SetProperty(ref _payDateRangeText, value);
     }
 
+    public int PayDateCount
+    {
+        get => _payDateCount;
+        set => SetProperty(ref _payDateCount, value);
+    }
+
+    public string NextPayDateText
+    {
+        get => _nextPayDateText;
+        set => SetProperty(ref _nextPayDateText, value);
+    }
+
     public string StatusMessage
     {
         get => _statusMessage;
@@ -158,7 +172,15 @@ public class CalendarViewModel : ViewModelBase
                 var paymentCount = scheduleItems.Count;
                 var averageCommission = paymentCount == 0 ? 0m : monthTotal / paymentCount;
                 var rangeText = BuildRangeText(scheduleItems);
-                return (groups, monthTotal, paymentCount, averageCommission, rangeText);
+                var payDateCount = groups.Count;
+                var nextPayDateText = BuildNextPayDateText(groups);
+                return (groups: groups,
+                    monthTotal: monthTotal,
+                    paymentCount: paymentCount,
+                    averageCommission: averageCommission,
+                    rangeText: rangeText,
+                    payDateCount: payDateCount,
+                    nextPayDateText: nextPayDateText);
             }).ConfigureAwait(false);
 
             await MainThread.InvokeOnMainThreadAsync(() =>
@@ -168,6 +190,8 @@ public class CalendarViewModel : ViewModelBase
                 MonthPaymentCount = result.paymentCount;
                 AverageCommission = result.averageCommission;
                 PayDateRangeText = result.rangeText;
+                PayDateCount = result.payDateCount;
+                NextPayDateText = result.nextPayDateText;
                 OnPropertyChanged(nameof(MonthLabel));
 
                 if (payments.Count == 0)
@@ -278,11 +302,34 @@ public class CalendarViewModel : ViewModelBase
         return $"{minDate.ToString("MMM d, yyyy", culture)} - {maxDate.ToString("MMM d, yyyy", culture)}";
     }
 
+    private static string BuildNextPayDateText(IReadOnlyList<PayDateGroup> groups)
+    {
+        if (groups.Count == 0)
+        {
+            return LocalizationResourceManager.Instance["PayCalendar_NoRange"];
+        }
+
+        var today = DateTime.Today;
+        var nextDate = groups
+            .Select(group => group.PayDate.Date)
+            .FirstOrDefault(date => date >= today);
+
+        if (nextDate == default)
+        {
+            nextDate = groups[0].PayDate.Date;
+        }
+
+        return nextDate.ToString("MMM d, yyyy", CultureInfo.CurrentCulture);
+    }
+
     private static List<PaymentScheduleItem> BuildScheduleItems(IEnumerable<Payment> payments, IEnumerable<Sale> sales, IEnumerable<Client> clients, IEnumerable<ContactModel> contacts)
     {
         var salesById = sales.ToDictionary(s => s.Id, s => s);
         var clientsById = clients.ToDictionary(c => c.Id, c => c);
         var contactsById = contacts.ToDictionary(c => c.Id, c => c);
+        var paymentsBySale = payments
+            .GroupBy(p => p.SaleId)
+            .ToDictionary(g => g.Key, g => g.OrderBy(p => p.PaymentDate).ToList());
 
         return payments.Select(payment =>
         {
@@ -299,12 +346,19 @@ public class CalendarViewModel : ViewModelBase
                 contactName = contact.Name;
             }
 
+            var paymentNumber = 0;
+            if (paymentsBySale.TryGetValue(payment.SaleId, out var salePayments))
+            {
+                var index = salePayments.FindIndex(p => p.Id == payment.Id);
+                paymentNumber = index >= 0 ? index + 1 : 0;
+            }
+
             return new PaymentScheduleItem
             {
                 PaymentId = payment.Id,
                 PayDate = payment.PayDate,
                 PaymentDate = payment.PaymentDate,
-                PaymentNumber = sale is null ? 0 : GetPaymentNumber(sale.SaleDate, payment.PaymentDate),
+                PaymentNumber = paymentNumber,
                 ClientName = clientName,
                 ContactName = contactName,
                 InvoiceNumber = sale?.InvoiceNumber ?? string.Empty,
@@ -315,17 +369,5 @@ public class CalendarViewModel : ViewModelBase
                 PaidDateUtc = payment.PaidDateUtc
             };
         }).OrderBy(p => p.PayDate).ThenBy(p => p.PaymentDate).ToList();
-    }
-
-    private static int GetPaymentNumber(DateTime saleDate, DateTime paymentDate)
-    {
-        var days = (paymentDate.Date - saleDate.Date).Days;
-        return days switch
-        {
-            25 => 1,
-            30 => 2,
-            35 => 3,
-            _ => 0
-        };
     }
 }

@@ -7,9 +7,13 @@
     xmlns:services="clr-namespace:ClientTracker.Services"
     Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Title_SaleDetails]}">
 
-        <ContentPage.Background>
+    <ContentPage.Background>
         <AppThemeBinding Light="{StaticResource AppBackgroundBrush}" Dark="{StaticResource AppBackgroundDarkBrush}" />
     </ContentPage.Background>
+
+    <ContentPage.Behaviors>
+        <controls:SwipeBackBehavior />
+    </ContentPage.Behaviors>
 
     <Grid RowDefinitions="Auto,*">
         <controls:TopBar NavigationMode="Back"
@@ -119,6 +123,9 @@
             </Frame>
 
             <Label Text="{Binding StatusMessage}" TextColor="{StaticResource Tertiary}" />
+            <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_SaveSale]}"
+                    Command="{Binding SaveSaleCommand}"
+                    Style="{StaticResource BaseButton}" />
                 </VerticalStackLayout>
             </ScrollView>
         </RefreshView>

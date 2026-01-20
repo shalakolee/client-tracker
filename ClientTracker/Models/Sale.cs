@@ -20,6 +20,10 @@ public class Sale
 
     public decimal CommissionPercent { get; set; }
 
+    public int CommissionPlanId { get; set; }
+
+    public string CommissionPlanSnapshotJson { get; set; } = string.Empty;
+
     public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
 
     public DateTime UpdatedUtc { get; set; } = DateTime.UtcNow;

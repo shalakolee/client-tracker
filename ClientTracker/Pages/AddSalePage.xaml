@@ -7,9 +7,13 @@
     xmlns:services="clr-namespace:ClientTracker.Services"
     Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Title_AddSale]}">
 
-        <ContentPage.Background>
+    <ContentPage.Background>
         <AppThemeBinding Light="{StaticResource AppBackgroundBrush}" Dark="{StaticResource AppBackgroundDarkBrush}" />
     </ContentPage.Background>
+
+    <ContentPage.Behaviors>
+        <controls:SwipeBackBehavior />
+    </ContentPage.Behaviors>
 
     <Grid RowDefinitions="Auto,*">
         <controls:TopBar NavigationMode="Back"
@@ -29,7 +33,19 @@
                         <VerticalStackLayout Spacing="6">
                             <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Title_Clients]}" Style="{StaticResource MutedLabel}" />
                             <Border Style="{StaticResource FormFieldContainer}">
-                                <Picker ItemsSource="{Binding Clients}" ItemDisplayBinding="{Binding Name}" SelectedItem="{Binding SelectedClient}" Style="{StaticResource FormFieldPicker}" />
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                    <Picker ItemsSource="{Binding Clients}" ItemDisplayBinding="{Binding Name}" SelectedItem="{Binding SelectedClient}" Style="{StaticResource FormFieldPicker}" />
+                                    <Button Grid.Column="1"
+                                            Text="+"
+                                            Command="{Binding AddClientCommand}"
+                                            WidthRequest="32"
+                                            HeightRequest="32"
+                                            CornerRadius="16"
+                                            Padding="0"
+                                            FontSize="18"
+                                            Style="{StaticResource SecondaryButton}"
+                                            AutomationProperties.Name="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_AddClient]}" />
+                                </Grid>
                             </Border>
                         </VerticalStackLayout>
                         <VerticalStackLayout Grid.Column="1" Spacing="6">
@@ -39,6 +55,12 @@
                             </Border>
                         </VerticalStackLayout>
                     </Grid>
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[CommissionPlan_Label]}" Style="{StaticResource MutedLabel}" />
+                        <Border Style="{StaticResource FormFieldContainer}">
+                            <Picker ItemsSource="{Binding CommissionPlans}" ItemDisplayBinding="{Binding Name}" SelectedItem="{Binding SelectedCommissionPlan}" Style="{StaticResource FormFieldPicker}" />
+                        </Border>
+                    </VerticalStackLayout>
                     <VerticalStackLayout Spacing="6">
                         <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Sale_InvoicePlaceholder]}" Style="{StaticResource MutedLabel}" />
                         <Border Style="{StaticResource FormFieldContainer}">

@@ -30,6 +30,8 @@ public class Client
 
     public string ContactPhone { get; set; } = string.Empty;
 
+    public int? DefaultCommissionPlanId { get; set; }
+
     public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
 
     public DateTime UpdatedUtc { get; set; } = DateTime.UtcNow;

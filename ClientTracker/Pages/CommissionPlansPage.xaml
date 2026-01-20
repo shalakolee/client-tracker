@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage
+    x:Class="ClientTracker.Pages.CommissionPlansPage"
+    x:Name="CommissionPlansPageRoot"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:controls="clr-namespace:ClientTracker.Controls"
+    xmlns:services="clr-namespace:ClientTracker.Services"
+    Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[CommissionPlan_Title]}">
+
+    <ContentPage.Background>
+        <AppThemeBinding Light="{StaticResource AppBackgroundBrush}" Dark="{StaticResource AppBackgroundDarkBrush}" />
+    </ContentPage.Background>
+
+    <ContentPage.Behaviors>
+        <controls:SwipeBackBehavior />
+    </ContentPage.Behaviors>
+
+    <Grid RowDefinitions="Auto,*">
+        <controls:TopBar NavigationMode="Back"
+            Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[CommissionPlan_Title]}"
+            Subtitle="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[CommissionPlan_Subtitle]}" />
+
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Padding="{StaticResource PagePadding}" Spacing="16">
+                <Label Text="{Binding StatusMessage}" TextColor="{StaticResource Tertiary}">
+                    <Label.Triggers>
+                        <DataTrigger TargetType="Label" Binding="{Binding StatusMessage}" Value="">
+                            <Setter Property="IsVisible" Value="False" />
+                        </DataTrigger>
+                    </Label.Triggers>
+                </Label>
+
+                <CollectionView ItemsSource="{Binding Plans}" SelectionMode="None">
+                    <CollectionView.ItemsLayout>
+                        <LinearItemsLayout Orientation="Vertical" ItemSpacing="0" />
+                    </CollectionView.ItemsLayout>
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate>
+                            <Grid RowDefinitions="Auto,1">
+                                <Grid Padding="16,12" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" MinimumHeightRequest="64">
+                                    <Grid.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding BindingContext.EditPlanCommand, Source={x:Reference CommissionPlansPageRoot}}" CommandParameter="{Binding .}" />
+                                    </Grid.GestureRecognizers>
+                                    <VerticalStackLayout Grid.Column="1" Spacing="4">
+                                        <HorizontalStackLayout Spacing="8">
+                                            <Label Text="{Binding Name}" FontAttributes="Bold" FontSize="16" />
+                                            <Border Style="{StaticResource BadgeBorder}" IsVisible="{Binding IsDefault}">
+                                                <Label>
+                                                    <Label.Style>
+                                                        <StaticResource Key="BadgeLabel" />
+                                                    </Label.Style>
+                                                    <Label.Text>
+                                                        <Binding Source="{x:Static services:LocalizationResourceManager.Instance}" Path="[CommissionPlan_DefaultBadge]" />
+                                                    </Label.Text>
+                                                </Label>
+                                            </Border>
+                                        </HorizontalStackLayout>
+                                        <Label Text="{Binding ClientSummary}" Style="{StaticResource MutedLabel}" />
+                                        <Label Text="{Binding CommissionSummary}" Style="{StaticResource MutedLabel}" />
+                                    </VerticalStackLayout>
+                                    <Image Grid.Column="2" Source="{AppThemeBinding Light=icon_chevron_right.svg, Dark=icon_chevron_right_dark.svg}" HeightRequest="16" WidthRequest="16" HorizontalOptions="End" VerticalOptions="Center" />
+                                </Grid>
+                                <BoxView Grid.Row="1" HeightRequest="1" BackgroundColor="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource Gray600}}" Margin="16,0" />
+                            </Grid>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <Button
+            Grid.Row="1"
+            Text="+"
+            Command="{Binding AddPlanCommand}"
+            FontSize="22"
+            FontAttributes="Bold"
+            WidthRequest="44"
+            HeightRequest="44"
+            CornerRadius="22"
+            Padding="0"
+            HorizontalOptions="End"
+            VerticalOptions="End"
+            Margin="0,0,20,20"
+            ZIndex="10"
+            Style="{StaticResource BaseButton}"
+            AutomationProperties.Name="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[CommissionPlan_AddPlan]}" />
+        <controls:LoadingOverlay Grid.RowSpan="2" ZIndex="99" />
+    </Grid>
+</ContentPage>

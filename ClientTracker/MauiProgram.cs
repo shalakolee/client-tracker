@@ -101,6 +101,8 @@ public static class MauiProgram
 		builder.Services.AddTransient<ContactsViewModel>();
 		builder.Services.AddTransient<ContactEditViewModel>();
 		builder.Services.AddTransient<ContactDetailsViewModel>();
+		builder.Services.AddTransient<CommissionPlansViewModel>();
+		builder.Services.AddTransient<CommissionPlanEditViewModel>();
 		builder.Services.AddTransient<ClientViewViewModel>();
 		builder.Services.AddTransient<ClientEditViewModel>();
 		builder.Services.AddTransient<SaleDetailsViewModel>();
@@ -111,6 +113,8 @@ public static class MauiProgram
 		builder.Services.AddTransient<PayCalendarPage>();
 		builder.Services.AddTransient<ContactsPage>();
 		builder.Services.AddTransient<ContactDetailsPage>();
+		builder.Services.AddTransient<CommissionPlansPage>();
+		builder.Services.AddTransient<CommissionPlanEditPage>();
 		builder.Services.AddTransient<SettingsPage>();
 		builder.Services.AddTransient<ClientViewPage>();
 		builder.Services.AddTransient<ClientEditPage>();

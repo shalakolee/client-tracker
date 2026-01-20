@@ -7,9 +7,13 @@
     xmlns:services="clr-namespace:ClientTracker.Services"
     Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Title_ContactDetails]}">
 
-        <ContentPage.Background>
+    <ContentPage.Background>
         <AppThemeBinding Light="{StaticResource AppBackgroundBrush}" Dark="{StaticResource AppBackgroundDarkBrush}" />
     </ContentPage.Background>
+
+    <ContentPage.Behaviors>
+        <controls:SwipeBackBehavior />
+    </ContentPage.Behaviors>
 
     <Grid RowDefinitions="Auto,*">
         <controls:TopBar NavigationMode="Back" Title="{Binding ContactName}" Subtitle="{Binding ClientName}">

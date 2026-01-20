@@ -17,7 +17,7 @@
   <data name="Nav_Clients" xml:space="preserve"><value>Clientes</value></data>
   <data name="Nav_Contacts" xml:space="preserve"><value>Contatos</value></data>
   <data name="Nav_Sales" xml:space="preserve"><value>Vendas</value></data>
-  <data name="Nav_PayCalendar" xml:space="preserve"><value>Calendario de Comissao</value></data>
+  <data name="Nav_PayCalendar" xml:space="preserve"><value>Repasses de Comissao</value></data>
   <data name="Nav_Settings" xml:space="preserve"><value>Configuracoes</value></data>
   <data name="App_Title" xml:space="preserve"><value>Controle de Clientes</value></data>
   <data name="App_Subtitle" xml:space="preserve"><value>Central de operacoes do cliente</value></data>
@@ -52,8 +52,51 @@
   <data name="Action_AddClient" xml:space="preserve"><value>Adicionar Cliente</value></data>
   <data name="Action_Refresh" xml:space="preserve"><value>Atualizar</value></data>
   <data name="Action_Apply" xml:space="preserve"><value>Aplicar</value></data>
+  <data name="Action_Select" xml:space="preserve"><value>Selecionar</value></data>
   <data name="Action_Prev" xml:space="preserve"><value>Anterior</value></data>
   <data name="Action_Next" xml:space="preserve"><value>Proximo</value></data>
+  <data name="CommissionPlan_Title" xml:space="preserve"><value>Planos de Comissao</value></data>
+  <data name="CommissionPlan_Subtitle" xml:space="preserve"><value>Gerencie regras de pagamentos e comissoes.</value></data>
+  <data name="CommissionPlan_AddPlan" xml:space="preserve"><value>Novo plano</value></data>
+  <data name="CommissionPlan_DefaultBadge" xml:space="preserve"><value>Padrao</value></data>
+  <data name="CommissionPlan_EditTitle" xml:space="preserve"><value>Editar plano de comissao</value></data>
+  <data name="CommissionPlan_CreateTitle" xml:space="preserve"><value>Criar plano de comissao</value></data>
+  <data name="CommissionPlan_EditSubtitle" xml:space="preserve"><value>Defina pagamentos do cliente e repasses.</value></data>
+  <data name="CommissionPlan_DetailsTitle" xml:space="preserve"><value>Detalhes do plano</value></data>
+  <data name="CommissionPlan_NameLabel" xml:space="preserve"><value>Nome do plano</value></data>
+  <data name="CommissionPlan_DefaultLabel" xml:space="preserve"><value>Plano padrao</value></data>
+  <data name="CommissionPlan_ClientTitle" xml:space="preserve"><value>Pagamentos do cliente</value></data>
+  <data name="CommissionPlan_CommissionTitle" xml:space="preserve"><value>Repasses de comissao</value></data>
+  <data name="CommissionPlan_ModeLabel" xml:space="preserve"><value>Tipo de agenda</value></data>
+  <data name="CommissionPlan_ModeOffsets" xml:space="preserve"><value>Atrasos (dias apos a venda)</value></data>
+  <data name="CommissionPlan_ModeMonthly" xml:space="preserve"><value>Datas fixas do mes</value></data>
+  <data name="CommissionPlan_OffsetsLabel" xml:space="preserve"><value>Atrasos (dias)</value></data>
+  <data name="CommissionPlan_OffsetsPlaceholder" xml:space="preserve"><value>25, 30, 35</value></data>
+  <data name="CommissionPlan_DaysLabel" xml:space="preserve"><value>Datas do mes</value></data>
+  <data name="CommissionPlan_DaysPlaceholder" xml:space="preserve"><value>15, ultimo</value></data>
+  <data name="CommissionPlan_CountLabel" xml:space="preserve"><value>Numero de pagamentos</value></data>
+  <data name="CommissionPlan_DayHandlingLabel" xml:space="preserve"><value>Se o pagamento cair no dia de repasse</value></data>
+  <data name="CommissionPlan_SameDay" xml:space="preserve"><value>Pagar no mesmo dia</value></data>
+  <data name="CommissionPlan_NextPayout" xml:space="preserve"><value>Pagar no proximo repasse</value></data>
+  <data name="CommissionPlan_Manage" xml:space="preserve"><value>Gerenciar</value></data>
+  <data name="CommissionPlan_SettingsHint" xml:space="preserve"><value>Crie planos e defina o padrao por cliente.</value></data>
+  <data name="CommissionPlan_ClientSummary" xml:space="preserve"><value>Cliente paga: {0}</value></data>
+  <data name="CommissionPlan_CommissionSummary" xml:space="preserve"><value>Comissao paga: {0}</value></data>
+  <data name="CommissionPlan_OffsetsFormat" xml:space="preserve"><value>{0} dias</value></data>
+  <data name="CommissionPlan_DaysFormat" xml:space="preserve"><value>{0}</value></data>
+  <data name="CommissionPlan_DaysCountFormat" xml:space="preserve"><value>{0} para {1} pagamentos</value></data>
+  <data name="CommissionPlan_NoOffsets" xml:space="preserve"><value>Sem atrasos</value></data>
+  <data name="CommissionPlan_NoDays" xml:space="preserve"><value>Sem datas</value></data>
+  <data name="CommissionPlan_LastDay" xml:space="preserve"><value>ultimo dia</value></data>
+  <data name="CommissionPlan_FirstDay" xml:space="preserve"><value>1o</value></data>
+  <data name="CommissionPlan_NameRequired" xml:space="preserve"><value>Informe o nome do plano.</value></data>
+  <data name="CommissionPlan_ModeRequired" xml:space="preserve"><value>Selecione o tipo de agenda.</value></data>
+  <data name="CommissionPlan_OffsetsRequired" xml:space="preserve"><value>Informe pelo menos um atraso.</value></data>
+  <data name="CommissionPlan_DaysRequired" xml:space="preserve"><value>Informe pelo menos uma data.</value></data>
+  <data name="CommissionPlan_CountRequired" xml:space="preserve"><value>Informe o numero de pagamentos.</value></data>
+  <data name="CommissionPlan_Empty" xml:space="preserve"><value>Nenhum plano de comissao.</value></data>
+  <data name="CommissionPlan_NotFound" xml:space="preserve"><value>Plano de comissao nao encontrado.</value></data>
+  <data name="CommissionPlan_Label" xml:space="preserve"><value>Plano de comissao</value></data>
 
   <data name="Dashboard_Subtitle" xml:space="preserve"><value>Visao geral do seu funil.</value></data>
   <data name="Dashboard_TotalClients" xml:space="preserve"><value>Total de Clientes</value></data>
@@ -158,6 +201,8 @@
   <data name="PayCalendar_OverviewPayments" xml:space="preserve"><value>Pagamentos</value></data>
   <data name="PayCalendar_OverviewAverage" xml:space="preserve"><value>Comissao media</value></data>
   <data name="PayCalendar_OverviewRange" xml:space="preserve"><value>Intervalo de repasse</value></data>
+  <data name="PayCalendar_OverviewPayDates" xml:space="preserve"><value>Datas de repasse</value></data>
+  <data name="PayCalendar_OverviewNextPayDate" xml:space="preserve"><value>Proxima data de repasse</value></data>
   <data name="PayCalendar_NoRange" xml:space="preserve"><value>Sem datas de repasse</value></data>
   <data name="PayCalendar_Paid" xml:space="preserve"><value>Pago</value></data>
   <data name="PayCalendar_Unpaid" xml:space="preserve"><value>Em aberto</value></data>

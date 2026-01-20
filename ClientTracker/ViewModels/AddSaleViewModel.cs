@@ -12,6 +12,7 @@ public class AddSaleViewModel : ViewModelBase
     private readonly DatabaseService _database;
     private Client? _selectedClient;
     private ContactModel? _selectedContact;
+    private CommissionPlan? _selectedCommissionPlan;
     private DateTime _saleDate = DateTime.Today;
     private string _amount = string.Empty;
     private string _commissionPercent = string.Empty;
@@ -23,11 +24,14 @@ public class AddSaleViewModel : ViewModelBase
         _database = database;
         Clients = new ObservableCollection<Client>();
         Contacts = new ObservableCollection<ContactModel>();
+        CommissionPlans = new ObservableCollection<CommissionPlan>();
         SaveCommand = new Command(async () => await SaveAsync());
+        AddClientCommand = new Command(async () => await Shell.Current.GoToAsync("client-edit"));
     }
 
     public ObservableCollection<Client> Clients { get; }
     public ObservableCollection<ContactModel> Contacts { get; }
+    public ObservableCollection<CommissionPlan> CommissionPlans { get; }
 
     public Client? SelectedClient
     {
@@ -37,6 +41,7 @@ public class AddSaleViewModel : ViewModelBase
             if (SetProperty(ref _selectedClient, value))
             {
                 _ = LoadContactsAsync();
+                ApplyDefaultPlanForClient();
             }
         }
     }
@@ -45,6 +50,12 @@ public class AddSaleViewModel : ViewModelBase
     {
         get => _selectedContact;
         set => SetProperty(ref _selectedContact, value);
+    }
+
+    public CommissionPlan? SelectedCommissionPlan
+    {
+        get => _selectedCommissionPlan;
+        set => SetProperty(ref _selectedCommissionPlan, value);
     }
 
     public DateTime SaleDate
@@ -78,6 +89,7 @@ public class AddSaleViewModel : ViewModelBase
     }
 
     public Command SaveCommand { get; }
+    public Command AddClientCommand { get; }
 
     public async Task LoadAsync(int? clientId = null)
     {
@@ -86,15 +98,26 @@ public class AddSaleViewModel : ViewModelBase
             StatusMessage = string.Empty;
             var selectedId = clientId ?? SelectedClient?.Id;
             var clients = await _database.GetClientsAsync();
+            var plans = await _database.GetCommissionPlansAsync();
             Clients.Clear();
             foreach (var client in clients)
             {
                 Clients.Add(client);
             }
 
+            CommissionPlans.Clear();
+            foreach (var plan in plans)
+            {
+                CommissionPlans.Add(plan);
+            }
+
             if (selectedId.HasValue)
             {
                 SelectedClient = Clients.FirstOrDefault(c => c.Id == selectedId.Value);
+            }
+            else
+            {
+                ApplyDefaultPlanForClient();
             }
         });
     }
@@ -154,7 +177,8 @@ public class AddSaleViewModel : ViewModelBase
             InvoiceNumber = InvoiceNumber.Trim(),
             SaleDate = SaleDate.Date,
             Amount = amount,
-            CommissionPercent = commissionPercent
+            CommissionPercent = commissionPercent,
+            CommissionPlanId = SelectedCommissionPlan?.Id ?? 0
         };
 
         await _database.AddSaleAsync(sale);
@@ -162,5 +186,24 @@ public class AddSaleViewModel : ViewModelBase
         {
             ["saleId"] = sale.Id
         });
+    }
+
+    private void ApplyDefaultPlanForClient()
+    {
+        if (CommissionPlans.Count == 0)
+        {
+            SelectedCommissionPlan = null;
+            return;
+        }
+
+        if (SelectedClient?.DefaultCommissionPlanId is int clientPlanId && clientPlanId > 0)
+        {
+            SelectedCommissionPlan = CommissionPlans.FirstOrDefault(p => p.Id == clientPlanId)
+                ?? CommissionPlans.FirstOrDefault(p => p.IsDefault)
+                ?? CommissionPlans.First();
+            return;
+        }
+
+        SelectedCommissionPlan = CommissionPlans.FirstOrDefault(p => p.IsDefault) ?? CommissionPlans.First();
     }
 }

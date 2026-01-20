@@ -50,7 +50,7 @@
             <Frame Style="{StaticResource CardFrame}">
                 <VerticalStackLayout Spacing="12">
                     <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[PayCalendar_OverviewTitle]}" Style="{StaticResource SectionTitle}" />
-                    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="12">
+                    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="12">
                         <VerticalStackLayout Spacing="4">
                             <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[PayCalendar_MonthTotal]}" Style="{StaticResource MutedLabel}" />
                             <Label Text="{Binding MonthTotal, StringFormat='{0:C}'}" FontSize="20" FontAttributes="Bold" />
@@ -66,6 +66,14 @@
                         <VerticalStackLayout Grid.Row="1" Grid.Column="1" Spacing="4">
                             <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[PayCalendar_OverviewRange]}" Style="{StaticResource MutedLabel}" />
                             <Label Text="{Binding PayDateRangeText}" FontAttributes="Bold" LineBreakMode="TailTruncation" MaxLines="2" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Grid.Row="2" Spacing="4">
+                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[PayCalendar_OverviewPayDates]}" Style="{StaticResource MutedLabel}" />
+                            <Label Text="{Binding PayDateCount}" FontSize="20" FontAttributes="Bold" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Grid.Row="2" Grid.Column="1" Spacing="4">
+                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[PayCalendar_OverviewNextPayDate]}" Style="{StaticResource MutedLabel}" />
+                            <Label Text="{Binding NextPayDateText}" FontAttributes="Bold" LineBreakMode="TailTruncation" MaxLines="2" />
                         </VerticalStackLayout>
                     </Grid>
 
@@ -89,7 +97,7 @@
                                             </Label.FormattedText>
                                         </Label>
                                         <Label Text="{Binding TotalCommission, StringFormat='{0:C}'}" FontAttributes="Bold" Grid.Column="2" HorizontalTextAlignment="End" />
-                                        <Image Grid.Column="3" Source="icon_chevron_right.svg" HeightRequest="16" WidthRequest="16" HorizontalOptions="End" VerticalOptions="Center">
+                                        <Image Grid.Column="3" Source="{AppThemeBinding Light=icon_chevron_right.svg, Dark=icon_chevron_right_dark.svg}" HeightRequest="16" WidthRequest="16" HorizontalOptions="End" VerticalOptions="Center">
                                             <Image.Triggers>
                                                 <DataTrigger TargetType="Image" Binding="{Binding IsExpanded}" Value="True">
                                                     <Setter Property="Rotation" Value="90" />

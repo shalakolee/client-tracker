@@ -29,5 +29,7 @@ public static class ShellFactory
         Routing.RegisterRoute("sale-add", typeof(Pages.AddSalePage));
         Routing.RegisterRoute("contact-details", typeof(Pages.ContactDetailsPage));
         Routing.RegisterRoute("contact-edit", typeof(Pages.ContactEditPage));
+        Routing.RegisterRoute("commission-plans", typeof(Pages.CommissionPlansPage));
+        Routing.RegisterRoute("commission-plan-edit", typeof(Pages.CommissionPlanEditPage));
     }
 }

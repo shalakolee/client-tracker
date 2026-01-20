@@ -148,8 +148,10 @@ public class SaleDetailsViewModel : ViewModelBase
     {
         Payments.Clear();
         var payments = await _database.GetPaymentsForSaleAsync(sale.Id);
-        foreach (var payment in payments)
+        var ordered = payments.OrderBy(p => p.PaymentDate).ToList();
+        for (var i = 0; i < ordered.Count; i++)
         {
+            var payment = ordered[i];
             Payments.Add(new PaymentEditItem
             {
                 PaymentId = payment.Id,
@@ -159,7 +161,7 @@ public class SaleDetailsViewModel : ViewModelBase
                 Amount = payment.Amount,
                 Commission = payment.Commission,
                 IsPaid = true,
-                PaymentNumber = GetPaymentNumber(sale.SaleDate, payment.PaymentDate)
+                PaymentNumber = i + 1
             });
         }
 
@@ -204,6 +206,13 @@ public class SaleDetailsViewModel : ViewModelBase
             CommissionPercent = commissionPercent
         };
 
+        var existingSale = await _database.GetSaleByIdAsync(SaleId);
+        if (existingSale is not null)
+        {
+            sale.CommissionPlanId = existingSale.CommissionPlanId;
+            sale.CommissionPlanSnapshotJson = existingSale.CommissionPlanSnapshotJson;
+        }
+
         await _database.UpdateSaleAsync(sale, true);
         await LoadPaymentsAsync(sale);
         StatusMessage = "Sale updated.";
@@ -218,25 +227,26 @@ public class SaleDetailsViewModel : ViewModelBase
             return;
         }
 
-        foreach (var payment in Payments)
+        var snapshot = await _database.GetSalePlanSnapshotAsync(SaleId);
+        for (var i = 0; i < Payments.Count; i++)
         {
-            var payDate = GetCommissionPayDate(payment.PaymentDate);
+            var payment = Payments[i];
             var commission = decimal.Round(payment.Amount * (commissionPercent / 100m), 2, MidpointRounding.AwayFromZero);
 
             await _database.UpdatePaymentDetailsAsync(new Payment
             {
                 Id = payment.PaymentId,
                 PaymentDate = payment.PaymentDate.Date,
-                PayDate = payDate,
+                PayDate = _database.ComputeCommissionPayDate(snapshot, payment.PaymentDate, i),
                 Amount = payment.Amount,
                 Commission = commission,
                 IsPaid = true,
                 PaidDateUtc = DateTime.UtcNow
             });
 
-            payment.PayDate = payDate;
+            payment.PayDate = _database.ComputeCommissionPayDate(snapshot, payment.PaymentDate, i);
             payment.Commission = commission;
-            payment.PaymentNumber = GetPaymentNumber(SaleDate, payment.PaymentDate);
+            payment.PaymentNumber = i + 1;
         }
 
         StatusMessage = "Payments updated.";
@@ -265,26 +275,4 @@ public class SaleDetailsViewModel : ViewModelBase
         return decimal.TryParse(input, NumberStyles.Number, CultureInfo.CurrentCulture, out value);
     }
 
-    private static DateTime GetCommissionPayDate(DateTime paymentDate)
-    {
-        if (paymentDate.Day <= 15)
-        {
-            return new DateTime(paymentDate.Year, paymentDate.Month, 15);
-        }
-
-        var lastDay = DateTime.DaysInMonth(paymentDate.Year, paymentDate.Month);
-        return new DateTime(paymentDate.Year, paymentDate.Month, lastDay);
-    }
-
-    private static int GetPaymentNumber(DateTime saleDate, DateTime paymentDate)
-    {
-        var days = (paymentDate.Date - saleDate.Date).Days;
-        return days switch
-        {
-            25 => 1,
-            30 => 2,
-            35 => 3,
-            _ => 0
-        };
-    }
 }

@@ -6,7 +6,7 @@
     IsVisible="{Binding IsBusy}"
     InputTransparent="False">
     <Grid>
-        <BoxView BackgroundColor="#FFFFFF" Opacity="0.92" />
+        <BoxView BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#0B0F1A}" Opacity="0.92" />
         <ActivityIndicator
             IsRunning="True"
             WidthRequest="36"

@@ -7,9 +7,13 @@
     xmlns:services="clr-namespace:ClientTracker.Services"
     Title="{Binding PageTitle}">
 
-        <ContentPage.Background>
+    <ContentPage.Background>
         <AppThemeBinding Light="{StaticResource AppBackgroundBrush}" Dark="{StaticResource AppBackgroundDarkBrush}" />
     </ContentPage.Background>
+
+    <ContentPage.Behaviors>
+        <controls:SwipeBackBehavior />
+    </ContentPage.Behaviors>
 
     <Grid RowDefinitions="Auto,*,Auto">
         <controls:TopBar NavigationMode="Back" Title="{Binding PageTitle}">
@@ -45,6 +49,12 @@
                             <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Client_TaxId]}" Style="{StaticResource MutedLabel}" />
                             <Border Style="{StaticResource FormFieldContainer}">
                                 <Entry Text="{Binding TaxId}" Style="{StaticResource FormFieldEntry}" />
+                            </Border>
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[CommissionPlan_DefaultLabel]}" Style="{StaticResource MutedLabel}" />
+                            <Border Style="{StaticResource FormFieldContainer}">
+                                <Picker ItemsSource="{Binding CommissionPlans}" ItemDisplayBinding="{Binding Name}" SelectedItem="{Binding SelectedCommissionPlan}" Style="{StaticResource FormFieldPicker}" />
                             </Border>
                         </VerticalStackLayout>
                         <VerticalStackLayout Spacing="6">
@@ -87,6 +97,9 @@
                 </Border>
 
             <Label Text="{Binding StatusMessage}" TextColor="{StaticResource Tertiary}" LineBreakMode="TailTruncation" />
+            <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Save]}"
+                    Command="{Binding SaveClientCommand}"
+                    Style="{StaticResource BaseButton}" />
             </VerticalStackLayout>
         </ScrollView>
         <controls:LoadingOverlay Grid.RowSpan="3" ZIndex="99" />

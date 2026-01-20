@@ -51,6 +51,23 @@
                 </Border.StrokeShape>
                 <VerticalStackLayout Spacing="10">
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                        <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[CommissionPlan_Title]}" Style="{StaticResource SectionTitle}" />
+                        <Button
+                            Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[CommissionPlan_Manage]}"
+                            Command="{Binding OpenCommissionPlansCommand}"
+                            Style="{StaticResource InlineButton}"
+                            Grid.Column="1" />
+                    </Grid>
+                    <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[CommissionPlan_SettingsHint]}" Style="{StaticResource MutedLabel}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Border BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource Gray950}}" StrokeThickness="0" Padding="16">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="20" />
+                </Border.StrokeShape>
+                <VerticalStackLayout Spacing="10">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                         <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Settings_Data]}" Style="{StaticResource SectionTitle}" />
                         <Button
                             Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Refresh]}"

@@ -11,9 +11,13 @@
         <services:InverseBoolConverter x:Key="InverseBoolConverter" />
     </ContentPage.Resources>
 
-        <ContentPage.Background>
+    <ContentPage.Background>
         <AppThemeBinding Light="{StaticResource AppBackgroundBrush}" Dark="{StaticResource AppBackgroundDarkBrush}" />
     </ContentPage.Background>
+
+    <ContentPage.Behaviors>
+        <controls:SwipeBackBehavior />
+    </ContentPage.Behaviors>
 
     <Grid RowDefinitions="Auto,*">
         <controls:TopBar NavigationMode="Back"

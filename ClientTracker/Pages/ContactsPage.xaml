@@ -18,6 +18,10 @@
         <AppThemeBinding Light="{StaticResource AppBackgroundBrush}" Dark="{StaticResource AppBackgroundDarkBrush}" />
     </ContentPage.Background>
 
+    <ContentPage.Behaviors>
+        <controls:SwipeBackBehavior />
+    </ContentPage.Behaviors>
+
     <Grid RowDefinitions="Auto,*">
         <controls:TopBar NavigationMode="Back"
             Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Title_Contacts]}"
@@ -81,7 +85,7 @@
                                         <Label Grid.Column="2" Grid.RowSpan="2" Text="{Binding Phone}" Style="{StaticResource MutedLabel}" HorizontalTextAlignment="End" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" MaxLines="1" />
                                         <Image Grid.Column="3"
                                                Grid.RowSpan="2"
-                                               Source="icon_chevron_right"
+                                               Source="{AppThemeBinding Light=icon_chevron_right.svg, Dark=icon_chevron_right_dark.svg}"
                                                WidthRequest="18"
                                                HeightRequest="18"
                                                Opacity="0.6"

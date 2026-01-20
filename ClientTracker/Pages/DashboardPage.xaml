@@ -12,6 +12,43 @@
         <AppThemeBinding Light="{StaticResource AppBackgroundBrush}" Dark="{StaticResource AppBackgroundDarkBrush}" />
     </ContentPage.Background>
 
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <LinearGradientBrush x:Key="DashboardCardClientsLight" StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#E0F2FE" Offset="0" />
+                <GradientStop Color="#EEF2FF" Offset="1" />
+            </LinearGradientBrush>
+            <LinearGradientBrush x:Key="DashboardCardClientsDark" StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#0B1220" Offset="0" />
+                <GradientStop Color="#111827" Offset="1" />
+            </LinearGradientBrush>
+            <LinearGradientBrush x:Key="DashboardCardSalesLight" StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#ECFDF5" Offset="0" />
+                <GradientStop Color="#E0F2FE" Offset="1" />
+            </LinearGradientBrush>
+            <LinearGradientBrush x:Key="DashboardCardSalesDark" StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#0B1F1A" Offset="0" />
+                <GradientStop Color="#0F172A" Offset="1" />
+            </LinearGradientBrush>
+            <LinearGradientBrush x:Key="DashboardCardRevenueLight" StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#FFF7ED" Offset="0" />
+                <GradientStop Color="#FEF3C7" Offset="1" />
+            </LinearGradientBrush>
+            <LinearGradientBrush x:Key="DashboardCardRevenueDark" StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#1F1300" Offset="0" />
+                <GradientStop Color="#1F2937" Offset="1" />
+            </LinearGradientBrush>
+            <LinearGradientBrush x:Key="DashboardCardCommissionLight" StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#FCE7F3" Offset="0" />
+                <GradientStop Color="#EEF2FF" Offset="1" />
+            </LinearGradientBrush>
+            <LinearGradientBrush x:Key="DashboardCardCommissionDark" StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#1F0B1A" Offset="0" />
+                <GradientStop Color="#1F2937" Offset="1" />
+            </LinearGradientBrush>
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
     <Grid RowDefinitions="Auto,*">
         <controls:TopBar
             Title="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Title_Dashboard]}"
@@ -24,10 +61,7 @@
                 <FlexLayout Wrap="Wrap" JustifyContent="SpaceBetween" AlignItems="Stretch">
                     <Border Padding="16" StrokeThickness="0" Margin="0,0,0,12" FlexLayout.Basis="48%">
                         <Border.Background>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                <GradientStop Color="#E0F2FE" Offset="0" />
-                                <GradientStop Color="#EEF2FF" Offset="1" />
-                            </LinearGradientBrush>
+                            <AppThemeBinding Light="{StaticResource DashboardCardClientsLight}" Dark="{StaticResource DashboardCardClientsDark}" />
                         </Border.Background>
                         <Border.StrokeShape>
                             <RoundRectangle CornerRadius="18" />
@@ -40,10 +74,7 @@
 
                     <Border Padding="16" StrokeThickness="0" Margin="0,0,0,12" FlexLayout.Basis="48%">
                         <Border.Background>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                <GradientStop Color="#ECFDF5" Offset="0" />
-                                <GradientStop Color="#E0F2FE" Offset="1" />
-                            </LinearGradientBrush>
+                            <AppThemeBinding Light="{StaticResource DashboardCardSalesLight}" Dark="{StaticResource DashboardCardSalesDark}" />
                         </Border.Background>
                         <Border.StrokeShape>
                             <RoundRectangle CornerRadius="18" />
@@ -56,33 +87,27 @@
 
                     <Border Padding="16" StrokeThickness="0" Margin="0,0,0,12" FlexLayout.Basis="48%">
                         <Border.Background>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                <GradientStop Color="#FFF7ED" Offset="0" />
-                                <GradientStop Color="#FEF3C7" Offset="1" />
-                            </LinearGradientBrush>
+                            <AppThemeBinding Light="{StaticResource DashboardCardRevenueLight}" Dark="{StaticResource DashboardCardRevenueDark}" />
                         </Border.Background>
                         <Border.StrokeShape>
                             <RoundRectangle CornerRadius="18" />
                         </Border.StrokeShape>
                         <VerticalStackLayout Spacing="6">
                             <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Dashboard_TotalRevenue]}" Style="{StaticResource MutedLabel}" />
-                            <Label Text="{Binding TotalSalesAmountText}" FontSize="26" FontAttributes="Bold" />
+                            <Label Text="{Binding TotalSalesAmount, StringFormat='{}{0:C}'}" FontSize="26" FontAttributes="Bold" />
                         </VerticalStackLayout>
                     </Border>
 
                     <Border Padding="16" StrokeThickness="0" Margin="0,0,0,12" FlexLayout.Basis="48%">
                         <Border.Background>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                <GradientStop Color="#FCE7F3" Offset="0" />
-                                <GradientStop Color="#EEF2FF" Offset="1" />
-                            </LinearGradientBrush>
+                            <AppThemeBinding Light="{StaticResource DashboardCardCommissionLight}" Dark="{StaticResource DashboardCardCommissionDark}" />
                         </Border.Background>
                         <Border.StrokeShape>
                             <RoundRectangle CornerRadius="18" />
                         </Border.StrokeShape>
                         <VerticalStackLayout Spacing="6">
                             <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Dashboard_OutstandingCommission]}" Style="{StaticResource MutedLabel}" />
-                            <Label Text="{Binding OutstandingCommissionAmountText}" FontSize="26" FontAttributes="Bold" />
+                            <Label Text="{Binding OutstandingCommissionAmount, StringFormat='{}{0:C}'}" FontSize="26" FontAttributes="Bold" />
                         </VerticalStackLayout>
                     </Border>
                 </FlexLayout>
@@ -107,16 +132,16 @@
                                     <VerticalStackLayout Spacing="6">
                                         <Label Text="{Binding Title}" Style="{StaticResource MutedLabel}" />
                                         <Label Text="{Binding CommissionAmount, StringFormat='{0:C}'}" FontSize="24" FontAttributes="Bold" />
-                                        <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
-                                            <VerticalStackLayout Spacing="2">
-                                                <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Dashboard_CommissionMidMonth]}" Style="{StaticResource MutedLabel}" />
-                                                <Label Text="{Binding MidMonthAmount, StringFormat='{0:C}'}" FontAttributes="Bold" />
-                                            </VerticalStackLayout>
-                                        <VerticalStackLayout Grid.Column="1" Spacing="2" HorizontalOptions="End">
-                                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Dashboard_CommissionEndMonth]}" Style="{StaticResource MutedLabel}" HorizontalTextAlignment="End" />
-                                            <Label Text="{Binding EndMonthAmount, StringFormat='{0:C}'}" FontAttributes="Bold" HorizontalTextAlignment="End" />
+                                        <VerticalStackLayout Spacing="4" BindableLayout.ItemsSource="{Binding PayDateSummaries}">
+                                            <BindableLayout.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                                        <Label Text="{Binding DateLabel}" Style="{StaticResource MutedLabel}" />
+                                                        <Label Grid.Column="2" Text="{Binding Amount, StringFormat='{0:C}'}" FontAttributes="Bold" HorizontalTextAlignment="End" />
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </BindableLayout.ItemTemplate>
                                         </VerticalStackLayout>
-                                        </Grid>
                                         <HorizontalStackLayout Spacing="8">
                                             <Border Style="{StaticResource BadgeBorder}">
                                                 <Label>
@@ -150,7 +175,8 @@
                         <controls:TrendChart
                             Labels="{Binding TrendLabels}"
                             SeriesA="{Binding TrendSales}"
-                            SeriesB="{Binding TrendCommission}" />
+                            SeriesB="{Binding TrendCommission}"
+                            SelectedIndex="{Binding TrendSelectedIndex}" />
                     </VerticalStackLayout>
                 </Frame>
                 </VerticalStackLayout>

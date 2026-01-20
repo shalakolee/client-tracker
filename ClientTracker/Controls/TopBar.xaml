@@ -33,7 +33,7 @@
             <ImageButton
                 BackgroundColor="Transparent"
                 Clicked="OnNavigationClicked"
-                Source="icon_back"
+                Source="{AppThemeBinding Light=icon_back.svg, Dark=icon_back_dark.svg}"
                 Padding="10"
                 WidthRequest="40"
                 HeightRequest="40"

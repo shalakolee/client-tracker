@@ -42,6 +42,7 @@ public class SettingsViewModel : ViewModelBase
         SaveDatabaseConnectionCommand = new Command(async () => await SaveDatabaseConnectionAsync());
         TestDatabaseConnectionCommand = new Command(async () => await TestDatabaseConnectionAsync());
         CheckUpdatesCommand = new Command(async () => await CheckUpdatesAsync());
+        OpenCommissionPlansCommand = new Command(async () => await Shell.Current.GoToAsync("commission-plans"));
         LoadUpdateSettings();
         _ = LoadDatabaseConnectionAsync();
         _ = RefreshDiagnosticsAsync();
@@ -61,6 +62,7 @@ public class SettingsViewModel : ViewModelBase
     public Command SaveDatabaseConnectionCommand { get; }
     public Command TestDatabaseConnectionCommand { get; }
     public Command CheckUpdatesCommand { get; }
+    public Command OpenCommissionPlansCommand { get; }
 
     public string DatabasePath
     {

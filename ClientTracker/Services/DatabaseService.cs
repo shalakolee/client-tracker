@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Text.Json;
 using ClientTracker.Models;
 using ContactModel = ClientTracker.Models.Contact;
 using MySqlConnector;
@@ -54,15 +55,18 @@ public class DatabaseService
 
         await EnsureRemoteSettingsAsync();
         await EnableForeignKeysAsync();
+        await _db.CreateTableAsync<CommissionPlan>();
         await _db.CreateTableAsync<Client>();
         await _db.CreateTableAsync<Sale>();
         await _db.CreateTableAsync<ContactModel>();
         await _db.CreateTableAsync<Payment>();
         await _db.CreateTableAsync<AuditLog>();
+        await EnsureCommissionPlanSchemaAsync();
         await EnsureClientSchemaAsync();
         await EnsureContactSchemaAsync();
         await EnsureSaleSchemaAsync();
         await EnsurePaymentSchemaAsync();
+        await EnsureDefaultCommissionPlanAsync();
         await CleanupOrphanedRecordsAsync();
         await EnsureForeignKeyConstraintsAsync();
         await EnsureIndexesAsync();
@@ -164,6 +168,10 @@ public class DatabaseService
                 "ALTER TABLE Sale MODIFY COLUMN Id INT NOT NULL AUTO_INCREMENT;",
                 "ALTER TABLE Payment MODIFY COLUMN Id INT NOT NULL AUTO_INCREMENT;",
                 "ALTER TABLE AuditLog MODIFY COLUMN Id INT NOT NULL AUTO_INCREMENT;",
+                "ALTER TABLE CommissionPlan MODIFY COLUMN Id INT NOT NULL AUTO_INCREMENT;",
+                "ALTER TABLE Client ADD COLUMN DefaultCommissionPlanId INT NULL;",
+                "ALTER TABLE Sale ADD COLUMN CommissionPlanId INT NOT NULL DEFAULT 0;",
+                "ALTER TABLE Sale ADD COLUMN CommissionPlanSnapshotJson TEXT NULL;"
             };
 
             foreach (var sql in alterStatements)
@@ -177,6 +185,8 @@ public class DatabaseService
                     // ignore
                 }
             }
+
+            await EnsureRemoteDefaultCommissionPlanAsync(conn, tx);
 
             await tx.CommitAsync();
             _remoteSchemaEnsured = true;
@@ -203,6 +213,7 @@ public class DatabaseService
             var contacts = await _db.Table<ContactModel>().ToListAsync();
             var sales = await _db.Table<Sale>().ToListAsync();
             var payments = await _db.Table<Payment>().ToListAsync();
+            var commissionPlans = await _db.Table<CommissionPlan>().ToListAsync();
             var audits = await _db.Table<AuditLog>().ToListAsync();
 
             await using var mysql = new MySqlConnection(_remoteConnectionString);
@@ -218,8 +229,10 @@ public class DatabaseService
                 await ExecMySqlAsync(mysql, tx, "TRUNCATE TABLE Sale;");
                 await ExecMySqlAsync(mysql, tx, "TRUNCATE TABLE Contact;");
                 await ExecMySqlAsync(mysql, tx, "TRUNCATE TABLE Client;");
+                await ExecMySqlAsync(mysql, tx, "TRUNCATE TABLE CommissionPlan;");
                 await ExecMySqlAsync(mysql, tx, "SET FOREIGN_KEY_CHECKS=1;");
 
+                await InsertCommissionPlansAsync(mysql, tx, commissionPlans, upsert: false);
                 await InsertClientsAsync(mysql, tx, clients, upsert: false);
                 await InsertContactsAsync(mysql, tx, contacts, upsert: false);
                 await InsertSalesAsync(mysql, tx, sales, upsert: false);
@@ -228,6 +241,7 @@ public class DatabaseService
             }
             else
             {
+                await InsertCommissionPlansAsync(mysql, tx, commissionPlans, upsert: true);
                 await InsertClientsAsync(mysql, tx, clients, upsert: true);
                 await InsertContactsAsync(mysql, tx, contacts, upsert: true);
                 await InsertSalesAsync(mysql, tx, sales, upsert: true);
@@ -267,6 +281,7 @@ public class DatabaseService
             var contacts = await QueryContactsAsync(mysql);
             var sales = await QuerySalesAsync(mysql);
             var payments = await QueryPaymentsAsync(mysql);
+            var commissionPlans = await QueryCommissionPlansAsync(mysql);
             var audits = await QueryAuditLogsAsync(mysql);
 
             await _db.ExecuteAsync("PRAGMA foreign_keys = OFF");
@@ -277,7 +292,9 @@ public class DatabaseService
                 await _db.ExecuteAsync("DELETE FROM Sale");
                 await _db.ExecuteAsync("DELETE FROM Contact");
                 await _db.ExecuteAsync("DELETE FROM Client");
+                await _db.ExecuteAsync("DELETE FROM CommissionPlan");
 
+                await _db.InsertAllAsync(commissionPlans);
                 await _db.InsertAllAsync(clients);
                 await _db.InsertAllAsync(contacts);
                 await _db.InsertAllAsync(sales);
@@ -291,6 +308,11 @@ public class DatabaseService
                     foreach (var client in clients)
                     {
                         conn.InsertOrReplace(client);
+                    }
+
+                    foreach (var plan in commissionPlans)
+                    {
+                        conn.InsertOrReplace(plan);
                     }
 
                     foreach (var contact in contacts)
@@ -337,6 +359,46 @@ public class DatabaseService
         await cmd.ExecuteNonQueryAsync();
     }
 
+    private static async Task EnsureRemoteDefaultCommissionPlanAsync(MySqlConnection conn, MySqlTransaction tx)
+    {
+        var checkSql = "SELECT COUNT(*) FROM CommissionPlan WHERE IsDeleted = 0;";
+        await using var checkCmd = new MySqlCommand(checkSql, conn, tx);
+        var count = Convert.ToInt32(await checkCmd.ExecuteScalarAsync());
+        if (count > 0)
+        {
+            return;
+        }
+
+        var now = DateTime.UtcNow;
+        var defaultPlan = BuildDefaultCommissionPlan(now);
+        const string insertSql = """
+            INSERT INTO CommissionPlan
+                (Name, IsDefault, ClientScheduleMode, ClientPaymentCount, ClientOffsetsJson, ClientMonthlyDaysJson,
+                 CommissionScheduleMode, CommissionPaymentCount, CommissionOffsetsJson, CommissionMonthlyDaysJson,
+                 CommissionDayHandling, CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc)
+            VALUES
+                (@Name, @IsDefault, @ClientScheduleMode, @ClientPaymentCount, @ClientOffsetsJson, @ClientMonthlyDaysJson,
+                 @CommissionScheduleMode, @CommissionPaymentCount, @CommissionOffsetsJson, @CommissionMonthlyDaysJson,
+                 @CommissionDayHandling, @CreatedUtc, @UpdatedUtc, 0, NULL)
+            """;
+
+        await using var cmd = new MySqlCommand(insertSql, conn, tx);
+        cmd.Parameters.AddWithValue("@Name", defaultPlan.Name);
+        cmd.Parameters.AddWithValue("@IsDefault", defaultPlan.IsDefault);
+        cmd.Parameters.AddWithValue("@ClientScheduleMode", (int)defaultPlan.ClientScheduleMode);
+        cmd.Parameters.AddWithValue("@ClientPaymentCount", defaultPlan.ClientPaymentCount);
+        cmd.Parameters.AddWithValue("@ClientOffsetsJson", defaultPlan.ClientOffsetsJson);
+        cmd.Parameters.AddWithValue("@ClientMonthlyDaysJson", defaultPlan.ClientMonthlyDaysJson);
+        cmd.Parameters.AddWithValue("@CommissionScheduleMode", (int)defaultPlan.CommissionScheduleMode);
+        cmd.Parameters.AddWithValue("@CommissionPaymentCount", defaultPlan.CommissionPaymentCount);
+        cmd.Parameters.AddWithValue("@CommissionOffsetsJson", defaultPlan.CommissionOffsetsJson);
+        cmd.Parameters.AddWithValue("@CommissionMonthlyDaysJson", defaultPlan.CommissionMonthlyDaysJson);
+        cmd.Parameters.AddWithValue("@CommissionDayHandling", (int)defaultPlan.CommissionDayHandling);
+        cmd.Parameters.AddWithValue("@CreatedUtc", defaultPlan.CreatedUtc);
+        cmd.Parameters.AddWithValue("@UpdatedUtc", defaultPlan.UpdatedUtc);
+        await cmd.ExecuteNonQueryAsync();
+    }
+
     private static async Task EnsureMySqlSchemaAsync(MySqlConnection conn, MySqlTransaction tx)
     {
         await ExecMySqlAsync(conn, tx, """
@@ -353,6 +415,7 @@ public class DatabaseService
                 ContactName VARCHAR(255) NOT NULL DEFAULT '',
                 ContactEmail VARCHAR(255) NOT NULL DEFAULT '',
                 ContactPhone VARCHAR(255) NOT NULL DEFAULT '',
+                DefaultCommissionPlanId INT NULL,
                 CreatedUtc DATETIME(6) NOT NULL,
                 UpdatedUtc DATETIME(6) NOT NULL,
                 IsDeleted TINYINT(1) NOT NULL DEFAULT 0,
@@ -388,6 +451,8 @@ public class DatabaseService
                 SaleDate DATE NOT NULL,
                 Amount DECIMAL(18,2) NOT NULL,
                 CommissionPercent DECIMAL(18,2) NOT NULL,
+                CommissionPlanId INT NOT NULL DEFAULT 0,
+                CommissionPlanSnapshotJson TEXT NOT NULL,
                 CreatedUtc DATETIME(6) NOT NULL,
                 UpdatedUtc DATETIME(6) NOT NULL,
                 IsDeleted TINYINT(1) NOT NULL DEFAULT 0,
@@ -397,6 +462,28 @@ public class DatabaseService
                 INDEX IX_Sale_ContactId (ContactId),
                 CONSTRAINT FK_Sale_Client FOREIGN KEY (ClientId) REFERENCES Client(Id) ON DELETE RESTRICT ON UPDATE RESTRICT,
                 CONSTRAINT FK_Sale_Contact FOREIGN KEY (ContactId) REFERENCES Contact(Id) ON DELETE RESTRICT ON UPDATE RESTRICT
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            """);
+
+        await ExecMySqlAsync(conn, tx, """
+            CREATE TABLE IF NOT EXISTS CommissionPlan (
+                Id INT NOT NULL AUTO_INCREMENT,
+                Name VARCHAR(255) NOT NULL,
+                IsDefault TINYINT(1) NOT NULL DEFAULT 0,
+                ClientScheduleMode INT NOT NULL DEFAULT 0,
+                ClientPaymentCount INT NOT NULL DEFAULT 0,
+                ClientOffsetsJson TEXT NOT NULL,
+                ClientMonthlyDaysJson TEXT NOT NULL,
+                CommissionScheduleMode INT NOT NULL DEFAULT 0,
+                CommissionPaymentCount INT NOT NULL DEFAULT 0,
+                CommissionOffsetsJson TEXT NOT NULL,
+                CommissionMonthlyDaysJson TEXT NOT NULL,
+                CommissionDayHandling INT NOT NULL DEFAULT 0,
+                CreatedUtc DATETIME(6) NOT NULL,
+                UpdatedUtc DATETIME(6) NOT NULL,
+                IsDeleted TINYINT(1) NOT NULL DEFAULT 0,
+                DeletedUtc DATETIME(6) NULL,
+                PRIMARY KEY (Id)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             """);
 
@@ -444,9 +531,9 @@ public class DatabaseService
 
         var sql = """
             INSERT INTO Client
-                (Id, Name, AddressLine1, AddressLine2, City, StateProvince, PostalCode, Country, TaxId, ContactName, ContactEmail, ContactPhone, CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc)
+                (Id, Name, AddressLine1, AddressLine2, City, StateProvince, PostalCode, Country, TaxId, ContactName, ContactEmail, ContactPhone, DefaultCommissionPlanId, CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc)
             VALUES
-                (@Id, @Name, @AddressLine1, @AddressLine2, @City, @StateProvince, @PostalCode, @Country, @TaxId, @ContactName, @ContactEmail, @ContactPhone, @CreatedUtc, @UpdatedUtc, @IsDeleted, @DeletedUtc)
+                (@Id, @Name, @AddressLine1, @AddressLine2, @City, @StateProvince, @PostalCode, @Country, @TaxId, @ContactName, @ContactEmail, @ContactPhone, @DefaultCommissionPlanId, @CreatedUtc, @UpdatedUtc, @IsDeleted, @DeletedUtc)
             """;
         if (upsert)
         {
@@ -463,6 +550,7 @@ public class DatabaseService
                     ContactName=VALUES(ContactName),
                     ContactEmail=VALUES(ContactEmail),
                     ContactPhone=VALUES(ContactPhone),
+                    DefaultCommissionPlanId=VALUES(DefaultCommissionPlanId),
                     CreatedUtc=VALUES(CreatedUtc),
                     UpdatedUtc=VALUES(UpdatedUtc),
                     IsDeleted=VALUES(IsDeleted),
@@ -483,6 +571,7 @@ public class DatabaseService
         cmd.Parameters.Add("@ContactName", MySqlDbType.VarChar);
         cmd.Parameters.Add("@ContactEmail", MySqlDbType.VarChar);
         cmd.Parameters.Add("@ContactPhone", MySqlDbType.VarChar);
+        cmd.Parameters.Add("@DefaultCommissionPlanId", MySqlDbType.Int32);
         cmd.Parameters.Add("@CreatedUtc", MySqlDbType.DateTime);
         cmd.Parameters.Add("@UpdatedUtc", MySqlDbType.DateTime);
         cmd.Parameters.Add("@IsDeleted", MySqlDbType.Bool);
@@ -502,6 +591,7 @@ public class DatabaseService
             cmd.Parameters["@ContactName"].Value = c.ContactName ?? string.Empty;
             cmd.Parameters["@ContactEmail"].Value = c.ContactEmail ?? string.Empty;
             cmd.Parameters["@ContactPhone"].Value = c.ContactPhone ?? string.Empty;
+            cmd.Parameters["@DefaultCommissionPlanId"].Value = c.DefaultCommissionPlanId ?? (object)DBNull.Value;
             cmd.Parameters["@CreatedUtc"].Value = c.CreatedUtc;
             cmd.Parameters["@UpdatedUtc"].Value = c.UpdatedUtc;
             cmd.Parameters["@IsDeleted"].Value = c.IsDeleted;
@@ -576,9 +666,9 @@ public class DatabaseService
 
         var sql = """
             INSERT INTO Sale
-                (Id, ClientId, ContactId, InvoiceNumber, SaleDate, Amount, CommissionPercent, CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc)
+                (Id, ClientId, ContactId, InvoiceNumber, SaleDate, Amount, CommissionPercent, CommissionPlanId, CommissionPlanSnapshotJson, CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc)
             VALUES
-                (@Id, @ClientId, @ContactId, @InvoiceNumber, @SaleDate, @Amount, @CommissionPercent, @CreatedUtc, @UpdatedUtc, @IsDeleted, @DeletedUtc)
+                (@Id, @ClientId, @ContactId, @InvoiceNumber, @SaleDate, @Amount, @CommissionPercent, @CommissionPlanId, @CommissionPlanSnapshotJson, @CreatedUtc, @UpdatedUtc, @IsDeleted, @DeletedUtc)
             """;
         if (upsert)
         {
@@ -590,6 +680,8 @@ public class DatabaseService
                     SaleDate=VALUES(SaleDate),
                     Amount=VALUES(Amount),
                     CommissionPercent=VALUES(CommissionPercent),
+                    CommissionPlanId=VALUES(CommissionPlanId),
+                    CommissionPlanSnapshotJson=VALUES(CommissionPlanSnapshotJson),
                     CreatedUtc=VALUES(CreatedUtc),
                     UpdatedUtc=VALUES(UpdatedUtc),
                     IsDeleted=VALUES(IsDeleted),
@@ -605,6 +697,8 @@ public class DatabaseService
         cmd.Parameters.Add("@SaleDate", MySqlDbType.Date);
         cmd.Parameters.Add("@Amount", MySqlDbType.NewDecimal);
         cmd.Parameters.Add("@CommissionPercent", MySqlDbType.NewDecimal);
+        cmd.Parameters.Add("@CommissionPlanId", MySqlDbType.Int32);
+        cmd.Parameters.Add("@CommissionPlanSnapshotJson", MySqlDbType.Text);
         cmd.Parameters.Add("@CreatedUtc", MySqlDbType.DateTime);
         cmd.Parameters.Add("@UpdatedUtc", MySqlDbType.DateTime);
         cmd.Parameters.Add("@IsDeleted", MySqlDbType.Bool);
@@ -619,6 +713,8 @@ public class DatabaseService
             cmd.Parameters["@SaleDate"].Value = s.SaleDate.Date;
             cmd.Parameters["@Amount"].Value = s.Amount;
             cmd.Parameters["@CommissionPercent"].Value = s.CommissionPercent;
+            cmd.Parameters["@CommissionPlanId"].Value = s.CommissionPlanId;
+            cmd.Parameters["@CommissionPlanSnapshotJson"].Value = s.CommissionPlanSnapshotJson ?? string.Empty;
             cmd.Parameters["@CreatedUtc"].Value = s.CreatedUtc;
             cmd.Parameters["@UpdatedUtc"].Value = s.UpdatedUtc;
             cmd.Parameters["@IsDeleted"].Value = s.IsDeleted;
@@ -738,7 +834,7 @@ public class DatabaseService
     private static async Task<List<Client>> QueryClientsAsync(MySqlConnection conn)
     {
         const string sql = """
-            SELECT Id, Name, AddressLine1, AddressLine2, City, StateProvince, PostalCode, Country, TaxId, ContactName, ContactEmail, ContactPhone, CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc
+            SELECT Id, Name, AddressLine1, AddressLine2, City, StateProvince, PostalCode, Country, TaxId, ContactName, ContactEmail, ContactPhone, DefaultCommissionPlanId, CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc
             FROM Client
             """;
 
@@ -761,10 +857,11 @@ public class DatabaseService
                 ContactName = reader.GetString(9),
                 ContactEmail = reader.GetString(10),
                 ContactPhone = reader.GetString(11),
-                CreatedUtc = reader.GetDateTime(12),
-                UpdatedUtc = reader.GetDateTime(13),
-                IsDeleted = reader.GetBoolean(14),
-                DeletedUtc = reader.IsDBNull(15) ? null : reader.GetDateTime(15)
+                DefaultCommissionPlanId = reader.IsDBNull(12) ? null : reader.GetInt32(12),
+                CreatedUtc = reader.GetDateTime(13),
+                UpdatedUtc = reader.GetDateTime(14),
+                IsDeleted = reader.GetBoolean(15),
+                DeletedUtc = reader.IsDBNull(16) ? null : reader.GetDateTime(16)
             });
         }
 
@@ -804,7 +901,7 @@ public class DatabaseService
     private static async Task<List<Sale>> QuerySalesAsync(MySqlConnection conn)
     {
         const string sql = """
-            SELECT Id, ClientId, ContactId, InvoiceNumber, SaleDate, Amount, CommissionPercent, CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc
+            SELECT Id, ClientId, ContactId, InvoiceNumber, SaleDate, Amount, CommissionPercent, CommissionPlanId, CommissionPlanSnapshotJson, CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc
             FROM Sale
             """;
 
@@ -822,10 +919,12 @@ public class DatabaseService
                 SaleDate = reader.GetDateTime(4),
                 Amount = reader.GetDecimal(5),
                 CommissionPercent = reader.GetDecimal(6),
-                CreatedUtc = reader.GetDateTime(7),
-                UpdatedUtc = reader.GetDateTime(8),
-                IsDeleted = reader.GetBoolean(9),
-                DeletedUtc = reader.IsDBNull(10) ? null : reader.GetDateTime(10)
+                CommissionPlanId = reader.GetInt32(7),
+                CommissionPlanSnapshotJson = reader.IsDBNull(8) ? string.Empty : reader.GetString(8),
+                CreatedUtc = reader.GetDateTime(9),
+                UpdatedUtc = reader.GetDateTime(10),
+                IsDeleted = reader.GetBoolean(11),
+                DeletedUtc = reader.IsDBNull(12) ? null : reader.GetDateTime(12)
             });
         }
 
@@ -858,6 +957,44 @@ public class DatabaseService
                 UpdatedUtc = reader.GetDateTime(9),
                 IsDeleted = reader.GetBoolean(10),
                 DeletedUtc = reader.IsDBNull(11) ? null : reader.GetDateTime(11)
+            });
+        }
+
+        return list;
+    }
+
+    private static async Task<List<CommissionPlan>> QueryCommissionPlansAsync(MySqlConnection conn)
+    {
+        const string sql = """
+            SELECT Id, Name, IsDefault, ClientScheduleMode, ClientPaymentCount, ClientOffsetsJson, ClientMonthlyDaysJson,
+                   CommissionScheduleMode, CommissionPaymentCount, CommissionOffsetsJson, CommissionMonthlyDaysJson,
+                   CommissionDayHandling, CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc
+            FROM CommissionPlan
+            """;
+
+        var list = new List<CommissionPlan>();
+        await using var cmd = new MySqlCommand(sql, conn);
+        await using var reader = await cmd.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+        {
+            list.Add(new CommissionPlan
+            {
+                Id = reader.GetInt32(0),
+                Name = reader.GetString(1),
+                IsDefault = reader.GetBoolean(2),
+                ClientScheduleMode = (ScheduleMode)reader.GetInt32(3),
+                ClientPaymentCount = reader.GetInt32(4),
+                ClientOffsetsJson = reader.GetString(5),
+                ClientMonthlyDaysJson = reader.GetString(6),
+                CommissionScheduleMode = (ScheduleMode)reader.GetInt32(7),
+                CommissionPaymentCount = reader.GetInt32(8),
+                CommissionOffsetsJson = reader.GetString(9),
+                CommissionMonthlyDaysJson = reader.GetString(10),
+                CommissionDayHandling = (CommissionDayHandling)reader.GetInt32(11),
+                CreatedUtc = reader.GetDateTime(12),
+                UpdatedUtc = reader.GetDateTime(13),
+                IsDeleted = reader.GetBoolean(14),
+                DeletedUtc = reader.IsDBNull(15) ? null : reader.GetDateTime(15)
             });
         }
 
@@ -922,6 +1059,7 @@ public class DatabaseService
             ("ContactName", "TEXT"),
             ("ContactEmail", "TEXT"),
             ("ContactPhone", "TEXT"),
+            ("DefaultCommissionPlanId", "INTEGER"),
             ("CreatedUtc", "TEXT"),
             ("UpdatedUtc", "TEXT"),
             ("IsDeleted", "INTEGER"),
@@ -952,6 +1090,156 @@ public class DatabaseService
         }
     }
 
+    private static async Task InsertCommissionPlansAsync(MySqlConnection conn, MySqlTransaction tx, IReadOnlyCollection<CommissionPlan> plans, bool upsert)
+    {
+        if (plans.Count == 0)
+        {
+            return;
+        }
+
+        var sql = """
+            INSERT INTO CommissionPlan
+                (Id, Name, IsDefault, ClientScheduleMode, ClientPaymentCount, ClientOffsetsJson, ClientMonthlyDaysJson,
+                 CommissionScheduleMode, CommissionPaymentCount, CommissionOffsetsJson, CommissionMonthlyDaysJson,
+                 CommissionDayHandling, CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc)
+            VALUES
+                (@Id, @Name, @IsDefault, @ClientScheduleMode, @ClientPaymentCount, @ClientOffsetsJson, @ClientMonthlyDaysJson,
+                 @CommissionScheduleMode, @CommissionPaymentCount, @CommissionOffsetsJson, @CommissionMonthlyDaysJson,
+                 @CommissionDayHandling, @CreatedUtc, @UpdatedUtc, @IsDeleted, @DeletedUtc)
+            """;
+        if (upsert)
+        {
+            sql += """
+                ON DUPLICATE KEY UPDATE
+                    Name=VALUES(Name),
+                    IsDefault=VALUES(IsDefault),
+                    ClientScheduleMode=VALUES(ClientScheduleMode),
+                    ClientPaymentCount=VALUES(ClientPaymentCount),
+                    ClientOffsetsJson=VALUES(ClientOffsetsJson),
+                    ClientMonthlyDaysJson=VALUES(ClientMonthlyDaysJson),
+                    CommissionScheduleMode=VALUES(CommissionScheduleMode),
+                    CommissionPaymentCount=VALUES(CommissionPaymentCount),
+                    CommissionOffsetsJson=VALUES(CommissionOffsetsJson),
+                    CommissionMonthlyDaysJson=VALUES(CommissionMonthlyDaysJson),
+                    CommissionDayHandling=VALUES(CommissionDayHandling),
+                    CreatedUtc=VALUES(CreatedUtc),
+                    UpdatedUtc=VALUES(UpdatedUtc),
+                    IsDeleted=VALUES(IsDeleted),
+                    DeletedUtc=VALUES(DeletedUtc);
+                """;
+        }
+
+        await using var cmd = new MySqlCommand(sql, conn, tx);
+        cmd.Parameters.Add("@Id", MySqlDbType.Int32);
+        cmd.Parameters.Add("@Name", MySqlDbType.VarChar);
+        cmd.Parameters.Add("@IsDefault", MySqlDbType.Bool);
+        cmd.Parameters.Add("@ClientScheduleMode", MySqlDbType.Int32);
+        cmd.Parameters.Add("@ClientPaymentCount", MySqlDbType.Int32);
+        cmd.Parameters.Add("@ClientOffsetsJson", MySqlDbType.Text);
+        cmd.Parameters.Add("@ClientMonthlyDaysJson", MySqlDbType.Text);
+        cmd.Parameters.Add("@CommissionScheduleMode", MySqlDbType.Int32);
+        cmd.Parameters.Add("@CommissionPaymentCount", MySqlDbType.Int32);
+        cmd.Parameters.Add("@CommissionOffsetsJson", MySqlDbType.Text);
+        cmd.Parameters.Add("@CommissionMonthlyDaysJson", MySqlDbType.Text);
+        cmd.Parameters.Add("@CommissionDayHandling", MySqlDbType.Int32);
+        cmd.Parameters.Add("@CreatedUtc", MySqlDbType.DateTime);
+        cmd.Parameters.Add("@UpdatedUtc", MySqlDbType.DateTime);
+        cmd.Parameters.Add("@IsDeleted", MySqlDbType.Bool);
+        cmd.Parameters.Add("@DeletedUtc", MySqlDbType.DateTime);
+
+        foreach (var plan in plans)
+        {
+            cmd.Parameters["@Id"].Value = plan.Id;
+            cmd.Parameters["@Name"].Value = plan.Name ?? string.Empty;
+            cmd.Parameters["@IsDefault"].Value = plan.IsDefault;
+            cmd.Parameters["@ClientScheduleMode"].Value = (int)plan.ClientScheduleMode;
+            cmd.Parameters["@ClientPaymentCount"].Value = plan.ClientPaymentCount;
+            cmd.Parameters["@ClientOffsetsJson"].Value = plan.ClientOffsetsJson ?? "[]";
+            cmd.Parameters["@ClientMonthlyDaysJson"].Value = plan.ClientMonthlyDaysJson ?? "[]";
+            cmd.Parameters["@CommissionScheduleMode"].Value = (int)plan.CommissionScheduleMode;
+            cmd.Parameters["@CommissionPaymentCount"].Value = plan.CommissionPaymentCount;
+            cmd.Parameters["@CommissionOffsetsJson"].Value = plan.CommissionOffsetsJson ?? "[]";
+            cmd.Parameters["@CommissionMonthlyDaysJson"].Value = plan.CommissionMonthlyDaysJson ?? "[]";
+            cmd.Parameters["@CommissionDayHandling"].Value = (int)plan.CommissionDayHandling;
+            cmd.Parameters["@CreatedUtc"].Value = plan.CreatedUtc;
+            cmd.Parameters["@UpdatedUtc"].Value = plan.UpdatedUtc;
+            cmd.Parameters["@IsDeleted"].Value = plan.IsDeleted;
+            cmd.Parameters["@DeletedUtc"].Value = plan.DeletedUtc ?? (object)DBNull.Value;
+            await cmd.ExecuteNonQueryAsync();
+        }
+    }
+
+    private async Task EnsureCommissionPlanSchemaAsync()
+    {
+        var columns = await _db.QueryAsync<TableInfo>("PRAGMA table_info(CommissionPlan)");
+        var existing = new HashSet<string>(columns.Select(c => c.name), StringComparer.OrdinalIgnoreCase);
+        var needed = new[]
+        {
+            ("Name", "TEXT"),
+            ("IsDefault", "INTEGER"),
+            ("ClientScheduleMode", "INTEGER"),
+            ("ClientPaymentCount", "INTEGER"),
+            ("ClientOffsetsJson", "TEXT"),
+            ("ClientMonthlyDaysJson", "TEXT"),
+            ("CommissionScheduleMode", "INTEGER"),
+            ("CommissionPaymentCount", "INTEGER"),
+            ("CommissionOffsetsJson", "TEXT"),
+            ("CommissionMonthlyDaysJson", "TEXT"),
+            ("CommissionDayHandling", "INTEGER"),
+            ("CreatedUtc", "TEXT"),
+            ("UpdatedUtc", "TEXT"),
+            ("IsDeleted", "INTEGER"),
+            ("DeletedUtc", "TEXT")
+        };
+
+        foreach (var (name, type) in needed)
+        {
+            if (!existing.Contains(name))
+            {
+                await _db.ExecuteAsync($"ALTER TABLE CommissionPlan ADD COLUMN {name} {type}");
+            }
+        }
+
+        var now = DateTime.UtcNow;
+        await _db.ExecuteAsync("UPDATE CommissionPlan SET IsDeleted = 0 WHERE IsDeleted IS NULL");
+        await _db.ExecuteAsync("UPDATE CommissionPlan SET CreatedUtc = ? WHERE CreatedUtc IS NULL", now);
+        await _db.ExecuteAsync("UPDATE CommissionPlan SET UpdatedUtc = ? WHERE UpdatedUtc IS NULL", now);
+    }
+
+    private async Task EnsureDefaultCommissionPlanAsync()
+    {
+        var existing = await _db.Table<CommissionPlan>().Where(p => !p.IsDeleted).CountAsync();
+        if (existing > 0)
+        {
+            return;
+        }
+
+        var now = DateTime.UtcNow;
+        var plan = BuildDefaultCommissionPlan(now);
+        await _db.InsertAsync(plan);
+    }
+
+    private static CommissionPlan BuildDefaultCommissionPlan(DateTime now)
+    {
+        return new CommissionPlan
+        {
+            Name = "Standard 25/30/35",
+            IsDefault = true,
+            ClientScheduleMode = ScheduleMode.Offsets,
+            ClientPaymentCount = 3,
+            ClientOffsetsJson = JsonSerializer.Serialize(new[] { 25, 30, 35 }),
+            ClientMonthlyDaysJson = "[]",
+            CommissionScheduleMode = ScheduleMode.MonthlyDays,
+            CommissionPaymentCount = 2,
+            CommissionOffsetsJson = "[]",
+            CommissionMonthlyDaysJson = JsonSerializer.Serialize(new[] { 15, 0 }),
+            CommissionDayHandling = CommissionDayHandling.SameDay,
+            CreatedUtc = now,
+            UpdatedUtc = now,
+            IsDeleted = false
+        };
+    }
+
     private async Task EnsureSaleSchemaAsync()
     {
         var columns = await _db.QueryAsync<TableInfo>("PRAGMA table_info(Sale)");
@@ -968,6 +1256,8 @@ public class DatabaseService
 
         var needed = new[]
         {
+            ("CommissionPlanId", "INTEGER"),
+            ("CommissionPlanSnapshotJson", "TEXT"),
             ("CreatedUtc", "TEXT"),
             ("UpdatedUtc", "TEXT"),
             ("IsDeleted", "INTEGER"),
@@ -986,6 +1276,8 @@ public class DatabaseService
         await _db.ExecuteAsync("UPDATE Sale SET IsDeleted = 0 WHERE IsDeleted IS NULL");
         await _db.ExecuteAsync("UPDATE Sale SET CreatedUtc = ? WHERE CreatedUtc IS NULL", now);
         await _db.ExecuteAsync("UPDATE Sale SET UpdatedUtc = ? WHERE UpdatedUtc IS NULL", now);
+        await _db.ExecuteAsync("UPDATE Sale SET CommissionPlanId = 0 WHERE CommissionPlanId IS NULL");
+        await _db.ExecuteAsync("UPDATE Sale SET CommissionPlanSnapshotJson = '' WHERE CommissionPlanSnapshotJson IS NULL");
     }
 
     private async Task EnsureContactSchemaAsync()
@@ -1157,6 +1449,8 @@ public class DatabaseService
                 SaleDate TEXT NOT NULL,
                 Amount REAL NOT NULL,
                 CommissionPercent REAL NOT NULL,
+                CommissionPlanId INTEGER NOT NULL DEFAULT 0,
+                CommissionPlanSnapshotJson TEXT NOT NULL DEFAULT '',
                 CreatedUtc TEXT NULL,
                 UpdatedUtc TEXT NULL,
                 IsDeleted INTEGER NOT NULL DEFAULT 0,
@@ -1167,8 +1461,9 @@ public class DatabaseService
             """);
 
         await _db.ExecuteAsync("""
-            INSERT INTO Sale (Id, ClientId, ContactId, InvoiceNumber, SaleDate, Amount, CommissionPercent, CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc)
+            INSERT INTO Sale (Id, ClientId, ContactId, InvoiceNumber, SaleDate, Amount, CommissionPercent, CommissionPlanId, CommissionPlanSnapshotJson, CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc)
             SELECT Id, ClientId, ContactId, COALESCE(InvoiceNumber, ''), SaleDate, Amount, CommissionPercent,
+                   COALESCE(CommissionPlanId, 0), COALESCE(CommissionPlanSnapshotJson, ''),
                    CreatedUtc, UpdatedUtc, COALESCE(IsDeleted, 0), DeletedUtc
             FROM Sale_legacy
             WHERE ClientId IN (SELECT Id FROM Client)
@@ -1285,7 +1580,8 @@ public class DatabaseService
             if (existingCount == 0)
             {
                 var now = DateTime.UtcNow;
-                var payments = BuildPaymentsForSale(sale, Array.Empty<Payment>(), now);
+                var snapshot = await GetSalePlanSnapshotAsync(sale);
+                var payments = BuildPaymentsForSale(sale, snapshot, Array.Empty<Payment>(), now);
                 await _db.InsertAllAsync(payments);
             }
         }
@@ -1304,7 +1600,7 @@ public class DatabaseService
 
             var sql = """
                 SELECT Id, Name, AddressLine1, AddressLine2, City, StateProvince, PostalCode, Country, TaxId, ContactName, ContactEmail, ContactPhone,
-                       CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc
+                       DefaultCommissionPlanId, CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc
                 FROM Client
                 WHERE IsDeleted = 0
                 """;
@@ -1347,10 +1643,11 @@ public class DatabaseService
                     ContactName = reader.GetString(9),
                     ContactEmail = reader.GetString(10),
                     ContactPhone = reader.GetString(11),
-                    CreatedUtc = reader.GetDateTime(12),
-                    UpdatedUtc = reader.GetDateTime(13),
-                    IsDeleted = reader.GetBoolean(14),
-                    DeletedUtc = reader.IsDBNull(15) ? null : reader.GetDateTime(15),
+                    DefaultCommissionPlanId = reader.IsDBNull(12) ? null : reader.GetInt32(12),
+                    CreatedUtc = reader.GetDateTime(13),
+                    UpdatedUtc = reader.GetDateTime(14),
+                    IsDeleted = reader.GetBoolean(15),
+                    DeletedUtc = reader.IsDBNull(16) ? null : reader.GetDateTime(16),
                 });
             }
 
@@ -1387,7 +1684,7 @@ public class DatabaseService
 
             const string sql = """
                 SELECT Id, Name, AddressLine1, AddressLine2, City, StateProvince, PostalCode, Country, TaxId, ContactName, ContactEmail, ContactPhone,
-                       CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc
+                       DefaultCommissionPlanId, CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc
                 FROM Client
                 WHERE Id = @Id AND IsDeleted = 0
                 LIMIT 1
@@ -1415,10 +1712,11 @@ public class DatabaseService
                 ContactName = reader.GetString(9),
                 ContactEmail = reader.GetString(10),
                 ContactPhone = reader.GetString(11),
-                CreatedUtc = reader.GetDateTime(12),
-                UpdatedUtc = reader.GetDateTime(13),
-                IsDeleted = reader.GetBoolean(14),
-                DeletedUtc = reader.IsDBNull(15) ? null : reader.GetDateTime(15),
+                DefaultCommissionPlanId = reader.IsDBNull(12) ? null : reader.GetInt32(12),
+                CreatedUtc = reader.GetDateTime(13),
+                UpdatedUtc = reader.GetDateTime(14),
+                IsDeleted = reader.GetBoolean(15),
+                DeletedUtc = reader.IsDBNull(16) ? null : reader.GetDateTime(16),
             };
         }
 
@@ -1506,10 +1804,10 @@ public class DatabaseService
             const string sql = """
                 INSERT INTO Client
                     (Name, AddressLine1, AddressLine2, City, StateProvince, PostalCode, Country, TaxId, ContactName, ContactEmail, ContactPhone,
-                     CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc)
+                     DefaultCommissionPlanId, CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc)
                 VALUES
                     (@Name, @AddressLine1, @AddressLine2, @City, @StateProvince, @PostalCode, @Country, @TaxId, @ContactName, @ContactEmail, @ContactPhone,
-                     @CreatedUtc, @UpdatedUtc, 0, NULL)
+                     @DefaultCommissionPlanId, @CreatedUtc, @UpdatedUtc, 0, NULL)
                 """;
 
             await using var cmd = new MySqlCommand(sql, conn);
@@ -1524,6 +1822,7 @@ public class DatabaseService
             cmd.Parameters.AddWithValue("@ContactName", client.ContactName);
             cmd.Parameters.AddWithValue("@ContactEmail", client.ContactEmail);
             cmd.Parameters.AddWithValue("@ContactPhone", client.ContactPhone);
+            cmd.Parameters.AddWithValue("@DefaultCommissionPlanId", client.DefaultCommissionPlanId ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@CreatedUtc", client.CreatedUtc);
             cmd.Parameters.AddWithValue("@UpdatedUtc", client.UpdatedUtc);
             await cmd.ExecuteNonQueryAsync();
@@ -1591,6 +1890,7 @@ public class DatabaseService
                     ContactName=@ContactName,
                     ContactEmail=@ContactEmail,
                     ContactPhone=@ContactPhone,
+                    DefaultCommissionPlanId=@DefaultCommissionPlanId,
                     UpdatedUtc=@UpdatedUtc
                 WHERE Id=@Id
                   AND IsDeleted = 0
@@ -1609,6 +1909,7 @@ public class DatabaseService
             cmd.Parameters.AddWithValue("@ContactName", client.ContactName);
             cmd.Parameters.AddWithValue("@ContactEmail", client.ContactEmail);
             cmd.Parameters.AddWithValue("@ContactPhone", client.ContactPhone);
+            cmd.Parameters.AddWithValue("@DefaultCommissionPlanId", client.DefaultCommissionPlanId ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@UpdatedUtc", client.UpdatedUtc);
             await cmd.ExecuteNonQueryAsync();
             await LogAuditAsync(nameof(Client), client.Id, "update", $"Name={client.Name}");
@@ -1707,7 +2008,7 @@ public class DatabaseService
             }
 
             const string sql = """
-                SELECT Id, ClientId, ContactId, InvoiceNumber, SaleDate, Amount, CommissionPercent, CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc
+                SELECT Id, ClientId, ContactId, InvoiceNumber, SaleDate, Amount, CommissionPercent, CommissionPlanId, CommissionPlanSnapshotJson, CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc
                 FROM Sale
                 WHERE ClientId=@ClientId AND IsDeleted=0
                 ORDER BY SaleDate DESC
@@ -1728,10 +2029,12 @@ public class DatabaseService
                     SaleDate = reader.GetDateTime(4),
                     Amount = reader.GetDecimal(5),
                     CommissionPercent = reader.GetDecimal(6),
-                    CreatedUtc = reader.GetDateTime(7),
-                    UpdatedUtc = reader.GetDateTime(8),
-                    IsDeleted = reader.GetBoolean(9),
-                    DeletedUtc = reader.IsDBNull(10) ? null : reader.GetDateTime(10),
+                    CommissionPlanId = reader.GetInt32(7),
+                    CommissionPlanSnapshotJson = reader.IsDBNull(8) ? string.Empty : reader.GetString(8),
+                    CreatedUtc = reader.GetDateTime(9),
+                    UpdatedUtc = reader.GetDateTime(10),
+                    IsDeleted = reader.GetBoolean(11),
+                    DeletedUtc = reader.IsDBNull(12) ? null : reader.GetDateTime(12),
                 });
             }
 
@@ -1799,7 +2102,7 @@ public class DatabaseService
 
             var sql = """
                 SELECT Id, Name, AddressLine1, AddressLine2, City, StateProvince, PostalCode, Country, TaxId, ContactName, ContactEmail, ContactPhone,
-                       CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc
+                       DefaultCommissionPlanId, CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc
                 FROM Client
                 WHERE IsDeleted = 0
                 """;
@@ -1844,10 +2147,11 @@ public class DatabaseService
                     ContactName = reader.GetString(9),
                     ContactEmail = reader.GetString(10),
                     ContactPhone = reader.GetString(11),
-                    CreatedUtc = reader.GetDateTime(12),
-                    UpdatedUtc = reader.GetDateTime(13),
-                    IsDeleted = reader.GetBoolean(14),
-                    DeletedUtc = reader.IsDBNull(15) ? null : reader.GetDateTime(15),
+                    DefaultCommissionPlanId = reader.IsDBNull(12) ? null : reader.GetInt32(12),
+                    CreatedUtc = reader.GetDateTime(13),
+                    UpdatedUtc = reader.GetDateTime(14),
+                    IsDeleted = reader.GetBoolean(15),
+                    DeletedUtc = reader.IsDBNull(16) ? null : reader.GetDateTime(16),
                 });
             }
 
@@ -1885,7 +2189,7 @@ public class DatabaseService
             }
 
             const string sql = """
-                SELECT Id, ClientId, ContactId, InvoiceNumber, SaleDate, Amount, CommissionPercent, CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc
+                SELECT Id, ClientId, ContactId, InvoiceNumber, SaleDate, Amount, CommissionPercent, CommissionPlanId, CommissionPlanSnapshotJson, CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc
                 FROM Sale
                 WHERE IsDeleted=0
                 ORDER BY SaleDate DESC
@@ -1904,10 +2208,12 @@ public class DatabaseService
                     SaleDate = reader.GetDateTime(4),
                     Amount = reader.GetDecimal(5),
                     CommissionPercent = reader.GetDecimal(6),
-                    CreatedUtc = reader.GetDateTime(7),
-                    UpdatedUtc = reader.GetDateTime(8),
-                    IsDeleted = reader.GetBoolean(9),
-                    DeletedUtc = reader.IsDBNull(10) ? null : reader.GetDateTime(10),
+                    CommissionPlanId = reader.GetInt32(7),
+                    CommissionPlanSnapshotJson = reader.IsDBNull(8) ? string.Empty : reader.GetString(8),
+                    CreatedUtc = reader.GetDateTime(9),
+                    UpdatedUtc = reader.GetDateTime(10),
+                    IsDeleted = reader.GetBoolean(11),
+                    DeletedUtc = reader.IsDBNull(12) ? null : reader.GetDateTime(12),
                 });
             }
             return list;
@@ -1918,6 +2224,305 @@ public class DatabaseService
             .Where(s => !s.IsDeleted)
             .OrderByDescending(s => s.SaleDate)
             .ToListAsync();
+    }
+
+    public async Task<List<CommissionPlan>> GetCommissionPlansAsync()
+    {
+        await EnsureRemoteSettingsAsync();
+        if (_remoteEnabled)
+        {
+            await using var conn = await TryOpenRemoteAsync();
+            if (conn is null)
+            {
+                return new List<CommissionPlan>();
+            }
+
+            const string sql = """
+                SELECT Id, Name, IsDefault, ClientScheduleMode, ClientPaymentCount, ClientOffsetsJson, ClientMonthlyDaysJson,
+                       CommissionScheduleMode, CommissionPaymentCount, CommissionOffsetsJson, CommissionMonthlyDaysJson,
+                       CommissionDayHandling, CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc
+                FROM CommissionPlan
+                WHERE IsDeleted=0
+                ORDER BY Name
+                """;
+
+            var list = new List<CommissionPlan>();
+            await using var cmd = new MySqlCommand(sql, conn);
+            await using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                list.Add(new CommissionPlan
+                {
+                    Id = reader.GetInt32(0),
+                    Name = reader.GetString(1),
+                    IsDefault = reader.GetBoolean(2),
+                    ClientScheduleMode = (ScheduleMode)reader.GetInt32(3),
+                    ClientPaymentCount = reader.GetInt32(4),
+                    ClientOffsetsJson = reader.GetString(5),
+                    ClientMonthlyDaysJson = reader.GetString(6),
+                    CommissionScheduleMode = (ScheduleMode)reader.GetInt32(7),
+                    CommissionPaymentCount = reader.GetInt32(8),
+                    CommissionOffsetsJson = reader.GetString(9),
+                    CommissionMonthlyDaysJson = reader.GetString(10),
+                    CommissionDayHandling = (CommissionDayHandling)reader.GetInt32(11),
+                    CreatedUtc = reader.GetDateTime(12),
+                    UpdatedUtc = reader.GetDateTime(13),
+                    IsDeleted = reader.GetBoolean(14),
+                    DeletedUtc = reader.IsDBNull(15) ? null : reader.GetDateTime(15)
+                });
+            }
+
+            return list;
+        }
+
+        await EnsureInitializedAsync();
+        return await _db.Table<CommissionPlan>()
+            .Where(p => !p.IsDeleted)
+            .OrderBy(p => p.Name)
+            .ToListAsync();
+    }
+
+    public async Task<CommissionPlan?> GetCommissionPlanByIdAsync(int planId)
+    {
+        if (planId <= 0)
+        {
+            return null;
+        }
+
+        await EnsureRemoteSettingsAsync();
+        if (_remoteEnabled)
+        {
+            await using var conn = await TryOpenRemoteAsync();
+            if (conn is null)
+            {
+                return null;
+            }
+
+            const string sql = """
+                SELECT Id, Name, IsDefault, ClientScheduleMode, ClientPaymentCount, ClientOffsetsJson, ClientMonthlyDaysJson,
+                       CommissionScheduleMode, CommissionPaymentCount, CommissionOffsetsJson, CommissionMonthlyDaysJson,
+                       CommissionDayHandling, CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc
+                FROM CommissionPlan
+                WHERE Id=@Id AND IsDeleted=0
+                LIMIT 1
+                """;
+
+            await using var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@Id", planId);
+            await using var reader = await cmd.ExecuteReaderAsync();
+            if (!await reader.ReadAsync())
+            {
+                return null;
+            }
+
+            return new CommissionPlan
+            {
+                Id = reader.GetInt32(0),
+                Name = reader.GetString(1),
+                IsDefault = reader.GetBoolean(2),
+                ClientScheduleMode = (ScheduleMode)reader.GetInt32(3),
+                ClientPaymentCount = reader.GetInt32(4),
+                ClientOffsetsJson = reader.GetString(5),
+                ClientMonthlyDaysJson = reader.GetString(6),
+                CommissionScheduleMode = (ScheduleMode)reader.GetInt32(7),
+                CommissionPaymentCount = reader.GetInt32(8),
+                CommissionOffsetsJson = reader.GetString(9),
+                CommissionMonthlyDaysJson = reader.GetString(10),
+                CommissionDayHandling = (CommissionDayHandling)reader.GetInt32(11),
+                CreatedUtc = reader.GetDateTime(12),
+                UpdatedUtc = reader.GetDateTime(13),
+                IsDeleted = reader.GetBoolean(14),
+                DeletedUtc = reader.IsDBNull(15) ? null : reader.GetDateTime(15)
+            };
+        }
+
+        await EnsureInitializedAsync();
+        return await _db.Table<CommissionPlan>()
+            .Where(p => p.Id == planId && !p.IsDeleted)
+            .FirstOrDefaultAsync();
+    }
+
+    public async Task<CommissionPlan?> GetDefaultCommissionPlanAsync()
+    {
+        await EnsureRemoteSettingsAsync();
+        if (_remoteEnabled)
+        {
+            await using var conn = await TryOpenRemoteAsync();
+            if (conn is null)
+            {
+                return null;
+            }
+
+            const string sql = """
+                SELECT Id, Name, IsDefault, ClientScheduleMode, ClientPaymentCount, ClientOffsetsJson, ClientMonthlyDaysJson,
+                       CommissionScheduleMode, CommissionPaymentCount, CommissionOffsetsJson, CommissionMonthlyDaysJson,
+                       CommissionDayHandling, CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc
+                FROM CommissionPlan
+                WHERE IsDeleted=0
+                ORDER BY IsDefault DESC, Id ASC
+                LIMIT 1
+                """;
+
+            await using var cmd = new MySqlCommand(sql, conn);
+            await using var reader = await cmd.ExecuteReaderAsync();
+            if (!await reader.ReadAsync())
+            {
+                return null;
+            }
+
+            return new CommissionPlan
+            {
+                Id = reader.GetInt32(0),
+                Name = reader.GetString(1),
+                IsDefault = reader.GetBoolean(2),
+                ClientScheduleMode = (ScheduleMode)reader.GetInt32(3),
+                ClientPaymentCount = reader.GetInt32(4),
+                ClientOffsetsJson = reader.GetString(5),
+                ClientMonthlyDaysJson = reader.GetString(6),
+                CommissionScheduleMode = (ScheduleMode)reader.GetInt32(7),
+                CommissionPaymentCount = reader.GetInt32(8),
+                CommissionOffsetsJson = reader.GetString(9),
+                CommissionMonthlyDaysJson = reader.GetString(10),
+                CommissionDayHandling = (CommissionDayHandling)reader.GetInt32(11),
+                CreatedUtc = reader.GetDateTime(12),
+                UpdatedUtc = reader.GetDateTime(13),
+                IsDeleted = reader.GetBoolean(14),
+                DeletedUtc = reader.IsDBNull(15) ? null : reader.GetDateTime(15)
+            };
+        }
+
+        await EnsureInitializedAsync();
+        return await _db.Table<CommissionPlan>()
+            .Where(p => !p.IsDeleted)
+            .OrderByDescending(p => p.IsDefault)
+            .ThenBy(p => p.Id)
+            .FirstOrDefaultAsync();
+    }
+
+    public async Task SaveCommissionPlanAsync(CommissionPlan plan)
+    {
+        await EnsureRemoteSettingsAsync();
+        if (_remoteEnabled)
+        {
+            await using var conn = await TryOpenRemoteAsync();
+            if (conn is null)
+            {
+                return;
+            }
+
+            await using var tx = await conn.BeginTransactionAsync();
+            try
+            {
+                plan.UpdatedUtc = DateTime.UtcNow;
+                if (plan.Id <= 0)
+                {
+                    plan.CreatedUtc = plan.UpdatedUtc;
+                    const string insertSql = """
+                        INSERT INTO CommissionPlan
+                            (Name, IsDefault, ClientScheduleMode, ClientPaymentCount, ClientOffsetsJson, ClientMonthlyDaysJson,
+                             CommissionScheduleMode, CommissionPaymentCount, CommissionOffsetsJson, CommissionMonthlyDaysJson,
+                             CommissionDayHandling, CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc)
+                        VALUES
+                            (@Name, @IsDefault, @ClientScheduleMode, @ClientPaymentCount, @ClientOffsetsJson, @ClientMonthlyDaysJson,
+                             @CommissionScheduleMode, @CommissionPaymentCount, @CommissionOffsetsJson, @CommissionMonthlyDaysJson,
+                             @CommissionDayHandling, @CreatedUtc, @UpdatedUtc, 0, NULL)
+                        """;
+
+                    await using var cmd = new MySqlCommand(insertSql, conn, tx);
+                    cmd.Parameters.AddWithValue("@Name", plan.Name ?? string.Empty);
+                    cmd.Parameters.AddWithValue("@IsDefault", plan.IsDefault);
+                    cmd.Parameters.AddWithValue("@ClientScheduleMode", (int)plan.ClientScheduleMode);
+                    cmd.Parameters.AddWithValue("@ClientPaymentCount", plan.ClientPaymentCount);
+                    cmd.Parameters.AddWithValue("@ClientOffsetsJson", plan.ClientOffsetsJson ?? "[]");
+                    cmd.Parameters.AddWithValue("@ClientMonthlyDaysJson", plan.ClientMonthlyDaysJson ?? "[]");
+                    cmd.Parameters.AddWithValue("@CommissionScheduleMode", (int)plan.CommissionScheduleMode);
+                    cmd.Parameters.AddWithValue("@CommissionPaymentCount", plan.CommissionPaymentCount);
+                    cmd.Parameters.AddWithValue("@CommissionOffsetsJson", plan.CommissionOffsetsJson ?? "[]");
+                    cmd.Parameters.AddWithValue("@CommissionMonthlyDaysJson", plan.CommissionMonthlyDaysJson ?? "[]");
+                    cmd.Parameters.AddWithValue("@CommissionDayHandling", (int)plan.CommissionDayHandling);
+                    cmd.Parameters.AddWithValue("@CreatedUtc", plan.CreatedUtc);
+                    cmd.Parameters.AddWithValue("@UpdatedUtc", plan.UpdatedUtc);
+                    await cmd.ExecuteNonQueryAsync();
+                    plan.Id = (int)cmd.LastInsertedId;
+                }
+                else
+                {
+                    const string updateSql = """
+                        UPDATE CommissionPlan
+                        SET Name=@Name,
+                            IsDefault=@IsDefault,
+                            ClientScheduleMode=@ClientScheduleMode,
+                            ClientPaymentCount=@ClientPaymentCount,
+                            ClientOffsetsJson=@ClientOffsetsJson,
+                            ClientMonthlyDaysJson=@ClientMonthlyDaysJson,
+                            CommissionScheduleMode=@CommissionScheduleMode,
+                            CommissionPaymentCount=@CommissionPaymentCount,
+                            CommissionOffsetsJson=@CommissionOffsetsJson,
+                            CommissionMonthlyDaysJson=@CommissionMonthlyDaysJson,
+                            CommissionDayHandling=@CommissionDayHandling,
+                            UpdatedUtc=@UpdatedUtc
+                        WHERE Id=@Id AND IsDeleted=0
+                        """;
+
+                    await using var cmd = new MySqlCommand(updateSql, conn, tx);
+                    cmd.Parameters.AddWithValue("@Id", plan.Id);
+                    cmd.Parameters.AddWithValue("@Name", plan.Name ?? string.Empty);
+                    cmd.Parameters.AddWithValue("@IsDefault", plan.IsDefault);
+                    cmd.Parameters.AddWithValue("@ClientScheduleMode", (int)plan.ClientScheduleMode);
+                    cmd.Parameters.AddWithValue("@ClientPaymentCount", plan.ClientPaymentCount);
+                    cmd.Parameters.AddWithValue("@ClientOffsetsJson", plan.ClientOffsetsJson ?? "[]");
+                    cmd.Parameters.AddWithValue("@ClientMonthlyDaysJson", plan.ClientMonthlyDaysJson ?? "[]");
+                    cmd.Parameters.AddWithValue("@CommissionScheduleMode", (int)plan.CommissionScheduleMode);
+                    cmd.Parameters.AddWithValue("@CommissionPaymentCount", plan.CommissionPaymentCount);
+                    cmd.Parameters.AddWithValue("@CommissionOffsetsJson", plan.CommissionOffsetsJson ?? "[]");
+                    cmd.Parameters.AddWithValue("@CommissionMonthlyDaysJson", plan.CommissionMonthlyDaysJson ?? "[]");
+                    cmd.Parameters.AddWithValue("@CommissionDayHandling", (int)plan.CommissionDayHandling);
+                    cmd.Parameters.AddWithValue("@UpdatedUtc", plan.UpdatedUtc);
+                    await cmd.ExecuteNonQueryAsync();
+                }
+
+                if (plan.IsDefault)
+                {
+                    await ClearDefaultCommissionPlansAsync(conn, tx, plan.Id);
+                }
+
+                await tx.CommitAsync();
+            }
+            catch
+            {
+                await tx.RollbackAsync();
+                throw;
+            }
+
+            await LogAuditAsync(nameof(CommissionPlan), plan.Id, "update", $"Name={plan.Name}");
+            return;
+        }
+
+        await EnsureInitializedAsync();
+        plan.UpdatedUtc = DateTime.UtcNow;
+        if (plan.Id <= 0)
+        {
+            plan.CreatedUtc = plan.UpdatedUtc;
+            await _db.InsertAsync(plan);
+        }
+        else
+        {
+            await _db.UpdateAsync(plan);
+        }
+
+        if (plan.IsDefault)
+        {
+            await _db.ExecuteAsync("UPDATE CommissionPlan SET IsDefault = 0 WHERE Id <> ?", plan.Id);
+        }
+
+        await LogAuditAsync(nameof(CommissionPlan), plan.Id, "update", $"Name={plan.Name}");
+    }
+
+    private static async Task ClearDefaultCommissionPlansAsync(MySqlConnection conn, MySqlTransaction tx, int planId)
+    {
+        await using var cmd = new MySqlCommand("UPDATE CommissionPlan SET IsDefault = 0 WHERE Id <> @Id", conn, tx);
+        cmd.Parameters.AddWithValue("@Id", planId);
+        await cmd.ExecuteNonQueryAsync();
     }
 
     public async Task<List<Sale>> GetSalesForClientIdsAsync(IReadOnlyCollection<int> clientIds)
@@ -1939,7 +2544,7 @@ public class DatabaseService
             var ids = clientIds.Distinct().ToArray();
             var inParams = string.Join(",", ids.Select((_, i) => $"@id{i}"));
             var sqlRemote = $"""
-                SELECT Id, ClientId, ContactId, InvoiceNumber, SaleDate, Amount, CommissionPercent, CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc
+                SELECT Id, ClientId, ContactId, InvoiceNumber, SaleDate, Amount, CommissionPercent, CommissionPlanId, CommissionPlanSnapshotJson, CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc
                 FROM Sale
                 WHERE IsDeleted=0 AND ClientId IN ({inParams})
                 """;
@@ -1963,10 +2568,12 @@ public class DatabaseService
                     SaleDate = reader.GetDateTime(4),
                     Amount = reader.GetDecimal(5),
                     CommissionPercent = reader.GetDecimal(6),
-                    CreatedUtc = reader.GetDateTime(7),
-                    UpdatedUtc = reader.GetDateTime(8),
-                    IsDeleted = reader.GetBoolean(9),
-                    DeletedUtc = reader.IsDBNull(10) ? null : reader.GetDateTime(10),
+                    CommissionPlanId = reader.GetInt32(7),
+                    CommissionPlanSnapshotJson = reader.IsDBNull(8) ? string.Empty : reader.GetString(8),
+                    CreatedUtc = reader.GetDateTime(9),
+                    UpdatedUtc = reader.GetDateTime(10),
+                    IsDeleted = reader.GetBoolean(11),
+                    DeletedUtc = reader.IsDBNull(12) ? null : reader.GetDateTime(12),
                 });
             }
 
@@ -1996,7 +2603,7 @@ public class DatabaseService
             }
 
             const string sql = """
-                SELECT Id, ClientId, ContactId, InvoiceNumber, SaleDate, Amount, CommissionPercent, CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc
+                SELECT Id, ClientId, ContactId, InvoiceNumber, SaleDate, Amount, CommissionPercent, CommissionPlanId, CommissionPlanSnapshotJson, CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc
                 FROM Sale
                 WHERE Id=@Id AND IsDeleted=0
                 LIMIT 1
@@ -2019,10 +2626,12 @@ public class DatabaseService
                 SaleDate = reader.GetDateTime(4),
                 Amount = reader.GetDecimal(5),
                 CommissionPercent = reader.GetDecimal(6),
-                CreatedUtc = reader.GetDateTime(7),
-                UpdatedUtc = reader.GetDateTime(8),
-                IsDeleted = reader.GetBoolean(9),
-                DeletedUtc = reader.IsDBNull(10) ? null : reader.GetDateTime(10),
+                CommissionPlanId = reader.GetInt32(7),
+                CommissionPlanSnapshotJson = reader.IsDBNull(8) ? string.Empty : reader.GetString(8),
+                CreatedUtc = reader.GetDateTime(9),
+                UpdatedUtc = reader.GetDateTime(10),
+                IsDeleted = reader.GetBoolean(11),
+                DeletedUtc = reader.IsDBNull(12) ? null : reader.GetDateTime(12),
             };
         }
 
@@ -2103,6 +2712,7 @@ public class DatabaseService
     public async Task<Sale> AddSaleAsync(Sale sale)
     {
         await EnsureRemoteSettingsAsync();
+        await EnsureSalePlanSnapshotAsync(sale);
         if (_remoteEnabled)
         {
             await using var conn = await TryOpenRemoteAsync();
@@ -2121,9 +2731,9 @@ public class DatabaseService
             {
                 const string insertSale = """
                     INSERT INTO Sale
-                        (ClientId, ContactId, InvoiceNumber, SaleDate, Amount, CommissionPercent, CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc)
+                        (ClientId, ContactId, InvoiceNumber, SaleDate, Amount, CommissionPercent, CommissionPlanId, CommissionPlanSnapshotJson, CreatedUtc, UpdatedUtc, IsDeleted, DeletedUtc)
                     VALUES
-                        (@ClientId, @ContactId, @InvoiceNumber, @SaleDate, @Amount, @CommissionPercent, @CreatedUtc, @UpdatedUtc, 0, NULL)
+                        (@ClientId, @ContactId, @InvoiceNumber, @SaleDate, @Amount, @CommissionPercent, @CommissionPlanId, @CommissionPlanSnapshotJson, @CreatedUtc, @UpdatedUtc, 0, NULL)
                     """;
 
                 await using (var cmd = new MySqlCommand(insertSale, conn, tx))
@@ -2134,13 +2744,16 @@ public class DatabaseService
                     cmd.Parameters.AddWithValue("@SaleDate", sale.SaleDate.Date);
                     cmd.Parameters.AddWithValue("@Amount", sale.Amount);
                     cmd.Parameters.AddWithValue("@CommissionPercent", sale.CommissionPercent);
+                    cmd.Parameters.AddWithValue("@CommissionPlanId", sale.CommissionPlanId);
+                    cmd.Parameters.AddWithValue("@CommissionPlanSnapshotJson", sale.CommissionPlanSnapshotJson ?? string.Empty);
                     cmd.Parameters.AddWithValue("@CreatedUtc", sale.CreatedUtc);
                     cmd.Parameters.AddWithValue("@UpdatedUtc", sale.UpdatedUtc);
                     await cmd.ExecuteNonQueryAsync();
                     sale.Id = (int)cmd.LastInsertedId;
                 }
 
-                var payments = BuildPaymentsForSale(sale, Array.Empty<Payment>(), nowUtc).ToList();
+                var snapshot = await GetSalePlanSnapshotAsync(sale);
+                var payments = BuildPaymentsForSale(sale, snapshot, Array.Empty<Payment>(), nowUtc).ToList();
                 await InsertPaymentsForSaleAsync(conn, tx, sale.Id, payments);
 
                 await tx.CommitAsync();
@@ -2180,6 +2793,7 @@ public class DatabaseService
     public async Task UpdateSaleAsync(Sale sale, bool regeneratePayments)
     {
         await EnsureRemoteSettingsAsync();
+        await EnsureSalePlanSnapshotAsync(sale);
         if (_remoteEnabled)
         {
             await using var conn = await TryOpenRemoteAsync();
@@ -2201,6 +2815,8 @@ public class DatabaseService
                         SaleDate=@SaleDate,
                         Amount=@Amount,
                         CommissionPercent=@CommissionPercent,
+                        CommissionPlanId=@CommissionPlanId,
+                        CommissionPlanSnapshotJson=@CommissionPlanSnapshotJson,
                         UpdatedUtc=@UpdatedUtc
                     WHERE Id=@Id AND IsDeleted=0
                     """;
@@ -2214,6 +2830,8 @@ public class DatabaseService
                     cmd.Parameters.AddWithValue("@SaleDate", sale.SaleDate.Date);
                     cmd.Parameters.AddWithValue("@Amount", sale.Amount);
                     cmd.Parameters.AddWithValue("@CommissionPercent", sale.CommissionPercent);
+                    cmd.Parameters.AddWithValue("@CommissionPlanId", sale.CommissionPlanId);
+                    cmd.Parameters.AddWithValue("@CommissionPlanSnapshotJson", sale.CommissionPlanSnapshotJson ?? string.Empty);
                     cmd.Parameters.AddWithValue("@UpdatedUtc", sale.UpdatedUtc);
                     await cmd.ExecuteNonQueryAsync();
                 }
@@ -2229,7 +2847,8 @@ public class DatabaseService
                     }
 
                     var now = DateTime.UtcNow;
-                    var payments = BuildPaymentsForSale(sale, existing, now).ToList();
+                    var snapshot = await GetSalePlanSnapshotAsync(sale);
+                    var payments = BuildPaymentsForSale(sale, snapshot, existing, now).ToList();
                     await InsertPaymentsForSaleAsync(conn, tx, sale.Id, payments);
                 }
 
@@ -3205,27 +3824,130 @@ public class DatabaseService
         var now = DateTime.UtcNow;
         await _db.ExecuteAsync("UPDATE Payment SET IsDeleted = 1, DeletedUtc = ?, UpdatedUtc = ? WHERE SaleId = ?", now, now, sale.Id);
 
-        var payments = BuildPaymentsForSale(sale, existing, now);
+        var snapshot = await GetSalePlanSnapshotAsync(sale);
+        var payments = BuildPaymentsForSale(sale, snapshot, existing, now);
         await _db.InsertAllAsync(payments);
     }
 
-    private static IEnumerable<Payment> BuildPaymentsForSale(Sale sale, IEnumerable<Payment> existing, DateTime now)
+    private async Task EnsureSalePlanSnapshotAsync(Sale sale)
+    {
+        if (sale.CommissionPlanId > 0 && !string.IsNullOrWhiteSpace(sale.CommissionPlanSnapshotJson))
+        {
+            return;
+        }
+
+        var plan = sale.CommissionPlanId > 0
+            ? await GetCommissionPlanByIdAsync(sale.CommissionPlanId)
+            : await GetDefaultCommissionPlanAsync();
+
+        plan ??= BuildDefaultCommissionPlan(DateTime.UtcNow);
+        sale.CommissionPlanId = plan.Id;
+        sale.CommissionPlanSnapshotJson = JsonSerializer.Serialize(BuildSnapshot(plan));
+    }
+
+    private async Task<CommissionPlanSnapshot> GetSalePlanSnapshotAsync(Sale sale)
+    {
+        if (!string.IsNullOrWhiteSpace(sale.CommissionPlanSnapshotJson))
+        {
+            try
+            {
+                var snapshot = JsonSerializer.Deserialize<CommissionPlanSnapshot>(sale.CommissionPlanSnapshotJson);
+                if (snapshot is not null)
+                {
+                    return snapshot;
+                }
+            }
+            catch
+            {
+                // Ignore invalid snapshot and rebuild from plan.
+            }
+        }
+
+        var plan = sale.CommissionPlanId > 0
+            ? await GetCommissionPlanByIdAsync(sale.CommissionPlanId)
+            : await GetDefaultCommissionPlanAsync();
+
+        if (plan is not null)
+        {
+            return BuildSnapshot(plan);
+        }
+
+        return BuildSnapshot(BuildDefaultCommissionPlan(DateTime.UtcNow));
+    }
+
+    public async Task<CommissionPlanSnapshot> GetSalePlanSnapshotAsync(int saleId)
+    {
+        var sale = await GetSaleByIdAsync(saleId);
+        if (sale is null)
+        {
+            return BuildSnapshot(BuildDefaultCommissionPlan(DateTime.UtcNow));
+        }
+
+        return await GetSalePlanSnapshotAsync(sale);
+    }
+
+    public DateTime ComputeCommissionPayDate(CommissionPlanSnapshot snapshot, DateTime paymentDate, int paymentIndex)
+    {
+        return GetCommissionPayDate(paymentDate, snapshot, paymentIndex);
+    }
+
+    private static CommissionPlanSnapshot BuildSnapshot(CommissionPlan plan)
+    {
+        return new CommissionPlanSnapshot
+        {
+            Name = plan.Name,
+            ClientScheduleMode = plan.ClientScheduleMode,
+            ClientPaymentCount = plan.ClientPaymentCount,
+            ClientOffsets = ParseIntList(plan.ClientOffsetsJson),
+            ClientMonthlyDays = ParseIntList(plan.ClientMonthlyDaysJson),
+            CommissionScheduleMode = plan.CommissionScheduleMode,
+            CommissionPaymentCount = plan.CommissionPaymentCount,
+            CommissionOffsets = ParseIntList(plan.CommissionOffsetsJson),
+            CommissionMonthlyDays = ParseIntList(plan.CommissionMonthlyDaysJson),
+            CommissionDayHandling = plan.CommissionDayHandling
+        };
+    }
+
+    private static List<int> ParseIntList(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return new List<int>();
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<List<int>>(json) ?? new List<int>();
+        }
+        catch
+        {
+            return new List<int>();
+        }
+    }
+
+    private static IEnumerable<Payment> BuildPaymentsForSale(Sale sale, CommissionPlanSnapshot snapshot, IEnumerable<Payment> existing, DateTime now)
     {
         var existingByDate = existing
             .GroupBy(p => p.PaymentDate.Date)
             .ToDictionary(g => g.Key, g => g.First());
-        var paymentDates = new[]
-        {
-            sale.SaleDate.Date.AddDays(25),
-            sale.SaleDate.Date.AddDays(30),
-            sale.SaleDate.Date.AddDays(35)
-        };
 
-        foreach (var paymentDate in paymentDates)
+        var paymentDates = BuildClientPaymentDates(sale.SaleDate.Date, snapshot);
+        var paymentCount = paymentDates.Count;
+        if (paymentCount == 0)
         {
-            var payDate = GetCommissionPayDate(paymentDate);
-            var paymentAmount = sale.Amount / 3m;
-            var commission = decimal.Round(paymentAmount * (sale.CommissionPercent / 100m), 2, MidpointRounding.AwayFromZero);
+            yield break;
+        }
+
+        var baseAmount = decimal.Round(sale.Amount / paymentCount, 2, MidpointRounding.AwayFromZero);
+        for (var i = 0; i < paymentCount; i++)
+        {
+            var paymentDate = paymentDates[i];
+            var payDate = GetCommissionPayDate(paymentDate, snapshot, i);
+            var amount = i == paymentCount - 1
+                ? sale.Amount - baseAmount * (paymentCount - 1)
+                : baseAmount;
+            amount = decimal.Round(amount, 2, MidpointRounding.AwayFromZero);
+            var commission = decimal.Round(amount * (sale.CommissionPercent / 100m), 2, MidpointRounding.AwayFromZero);
 
             existingByDate.TryGetValue(paymentDate.Date, out var existingPayment);
 
@@ -3234,7 +3956,7 @@ public class DatabaseService
                 SaleId = sale.Id,
                 PaymentDate = paymentDate.Date,
                 PayDate = payDate,
-                Amount = paymentAmount,
+                Amount = amount,
                 Commission = commission,
                 IsPaid = existingPayment?.IsPaid ?? false,
                 PaidDateUtc = existingPayment?.PaidDateUtc,
@@ -3245,15 +3967,139 @@ public class DatabaseService
         }
     }
 
-    private static DateTime GetCommissionPayDate(DateTime paymentDate)
+    private static List<DateTime> BuildClientPaymentDates(DateTime saleDate, CommissionPlanSnapshot snapshot)
     {
-        if (paymentDate.Day <= 15)
+        if (snapshot.ClientScheduleMode == ScheduleMode.MonthlyDays)
         {
-            return new DateTime(paymentDate.Year, paymentDate.Month, 15);
+            var normalizedDays = NormalizeMonthlyDays(snapshot.ClientMonthlyDays);
+            var count = snapshot.ClientPaymentCount > 0 ? snapshot.ClientPaymentCount : normalizedDays.Count;
+            return BuildMonthlyDates(saleDate, normalizedDays, count);
         }
 
-        var lastDay = DateTime.DaysInMonth(paymentDate.Year, paymentDate.Month);
-        return new DateTime(paymentDate.Year, paymentDate.Month, lastDay);
+        var offsets = snapshot.ClientOffsets.Count > 0
+            ? snapshot.ClientOffsets
+            : new List<int> { 25, 30, 35 };
+        return offsets.Select(offset => saleDate.AddDays(offset)).ToList();
+    }
+
+    private static DateTime GetCommissionPayDate(DateTime paymentDate, CommissionPlanSnapshot snapshot, int paymentIndex)
+    {
+        if (snapshot.CommissionScheduleMode == ScheduleMode.Offsets)
+        {
+            if (snapshot.CommissionOffsets.Count == 0)
+            {
+                return paymentDate;
+            }
+
+            var offset = paymentIndex < snapshot.CommissionOffsets.Count
+                ? snapshot.CommissionOffsets[paymentIndex]
+                : snapshot.CommissionOffsets[^1];
+            return paymentDate.AddDays(offset);
+        }
+
+        var normalizedDays = NormalizeMonthlyDays(snapshot.CommissionMonthlyDays);
+        return GetNextMonthlyPayDate(paymentDate, normalizedDays, snapshot.CommissionDayHandling);
+    }
+
+    private static List<int> NormalizeMonthlyDays(IEnumerable<int> days)
+    {
+        var normalized = days
+            .Where(day => day == 0 || (day >= 1 && day <= 31))
+            .Distinct()
+            .ToList();
+
+        normalized.Sort((a, b) =>
+        {
+            var left = a == 0 ? 32 : a;
+            var right = b == 0 ? 32 : b;
+            return left.CompareTo(right);
+        });
+
+        return normalized;
+    }
+
+    private static List<DateTime> BuildMonthlyDates(DateTime startDate, List<int> monthlyDays, int count)
+    {
+        var results = new List<DateTime>();
+        if (monthlyDays.Count == 0 || count <= 0)
+        {
+            return results;
+        }
+
+        var cursor = new DateTime(startDate.Year, startDate.Month, 1);
+        var firstMonth = true;
+        while (results.Count < count)
+        {
+            var days = GetDaysForMonth(monthlyDays, cursor.Year, cursor.Month);
+            foreach (var day in days)
+            {
+                var candidate = new DateTime(cursor.Year, cursor.Month, day);
+                if (firstMonth && candidate < startDate)
+                {
+                    continue;
+                }
+
+                results.Add(candidate);
+                if (results.Count >= count)
+                {
+                    break;
+                }
+            }
+
+            firstMonth = false;
+            cursor = cursor.AddMonths(1);
+        }
+
+        return results;
+    }
+
+    private static List<int> GetDaysForMonth(List<int> monthlyDays, int year, int month)
+    {
+        var lastDay = DateTime.DaysInMonth(year, month);
+        var days = new List<int>();
+        foreach (var day in monthlyDays)
+        {
+            days.Add(day == 0 ? lastDay : Math.Min(day, lastDay));
+        }
+
+        days.Sort();
+        return days;
+    }
+
+    private static DateTime GetNextMonthlyPayDate(DateTime baseDate, List<int> monthlyDays, CommissionDayHandling handling)
+    {
+        if (monthlyDays.Count == 0)
+        {
+            return baseDate;
+        }
+
+        var year = baseDate.Year;
+        var month = baseDate.Month;
+        while (true)
+        {
+            var days = GetDaysForMonth(monthlyDays, year, month);
+            foreach (var day in days)
+            {
+                if (year == baseDate.Year && month == baseDate.Month)
+                {
+                    if (day < baseDate.Day)
+                    {
+                        continue;
+                    }
+
+                    if (day == baseDate.Day && handling == CommissionDayHandling.NextPayout)
+                    {
+                        continue;
+                    }
+                }
+
+                return new DateTime(year, month, day);
+            }
+
+            var next = new DateTime(year, month, 1).AddMonths(1);
+            year = next.Year;
+            month = next.Month;
+        }
     }
 
     private async Task EnsureSalePaymentIntegrityAsync(int saleId)

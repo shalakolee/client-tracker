@@ -22,6 +22,7 @@ public class ClientEditViewModel : ViewModelBase
     private string _taxId = string.Empty;
     private string _statusMessage = string.Empty;
     private string _pageTitle = LocalizationResourceManager.Instance["Title_ClientEdit"];
+    private CommissionPlan? _selectedCommissionPlan;
 
     private ContactModel? _selectedContact;
     private string _contactName = string.Empty;
@@ -40,6 +41,7 @@ public class ClientEditViewModel : ViewModelBase
         _database = database;
         Contacts = new ObservableCollection<ContactModel>();
         Sales = new ObservableCollection<SaleEntry>();
+        CommissionPlans = new ObservableCollection<CommissionPlan>();
 
         SaveClientCommand = new Command(async () => await SaveClientAsync());
         OpenClientCommand = new Command(async () => await OpenClientAsync(), () => ClientId > 0);
@@ -117,6 +119,13 @@ public class ClientEditViewModel : ViewModelBase
 
     public ObservableCollection<ContactModel> Contacts { get; }
     public ObservableCollection<SaleEntry> Sales { get; }
+    public ObservableCollection<CommissionPlan> CommissionPlans { get; }
+
+    public CommissionPlan? SelectedCommissionPlan
+    {
+        get => _selectedCommissionPlan;
+        set => SetProperty(ref _selectedCommissionPlan, value);
+    }
 
     public ContactModel? SelectedContact
     {
@@ -257,6 +266,7 @@ public class ClientEditViewModel : ViewModelBase
                 TaxId = string.Empty;
                 Contacts.Clear();
                 Sales.Clear();
+                await LoadCommissionPlansAsync();
                 PageTitle = LocalizationResourceManager.Instance["Title_ClientNew"];
                 OnPropertyChanged(nameof(IsExistingClient));
                 return;
@@ -281,6 +291,7 @@ public class ClientEditViewModel : ViewModelBase
             PageTitle = LocalizationResourceManager.Instance["Title_ClientEdit"];
             OnPropertyChanged(nameof(IsExistingClient));
 
+            await LoadCommissionPlansAsync(client.DefaultCommissionPlanId);
             await LoadContactsAsync();
             await LoadSalesAsync();
         });
@@ -306,7 +317,8 @@ public class ClientEditViewModel : ViewModelBase
                 StateProvince = StateProvince.Trim(),
                 PostalCode = PostalCode.Trim(),
                 Country = Country.Trim(),
-                TaxId = TaxId.Trim()
+                TaxId = TaxId.Trim(),
+                DefaultCommissionPlanId = SelectedCommissionPlan?.Id
             };
 
             await _database.AddClientAsync(newClient);
@@ -336,6 +348,7 @@ public class ClientEditViewModel : ViewModelBase
             client.PostalCode = PostalCode.Trim();
             client.Country = Country.Trim();
             client.TaxId = TaxId.Trim();
+            client.DefaultCommissionPlanId = SelectedCommissionPlan?.Id;
 
             await _database.UpdateClientAsync(client);
             StatusMessage = "Client details saved.";
@@ -360,6 +373,23 @@ public class ClientEditViewModel : ViewModelBase
         {
             Contacts.Add(contact);
         }
+    }
+
+    private async Task LoadCommissionPlansAsync(int? selectedPlanId = null)
+    {
+        CommissionPlans.Clear();
+        var plans = await _database.GetCommissionPlansAsync();
+        foreach (var plan in plans)
+        {
+            CommissionPlans.Add(plan);
+        }
+
+        if (selectedPlanId.HasValue && selectedPlanId.Value > 0)
+        {
+            SelectedCommissionPlan = CommissionPlans.FirstOrDefault(p => p.Id == selectedPlanId.Value);
+        }
+
+        SelectedCommissionPlan ??= CommissionPlans.FirstOrDefault(p => p.IsDefault) ?? CommissionPlans.FirstOrDefault();
     }
 
     private async Task AddContactAsync()
@@ -469,7 +499,8 @@ public class ClientEditViewModel : ViewModelBase
             InvoiceNumber = SaleInvoiceNumber.Trim(),
             SaleDate = SaleDate.Date,
             Amount = amount,
-            CommissionPercent = commissionPercent
+            CommissionPercent = commissionPercent,
+            CommissionPlanId = SelectedCommissionPlan?.Id ?? 0
         };
 
         await _database.AddSaleAsync(sale);
@@ -490,6 +521,10 @@ public class ClientEditViewModel : ViewModelBase
             return;
         }
 
+        var existingSale = await _database.GetSaleByIdAsync(SelectedSale.Id);
+        var planId = existingSale?.CommissionPlanId ?? 0;
+        var planSnapshot = existingSale?.CommissionPlanSnapshotJson ?? string.Empty;
+
         var sale = new Sale
         {
             Id = SelectedSale.Id,
@@ -498,7 +533,9 @@ public class ClientEditViewModel : ViewModelBase
             InvoiceNumber = SaleInvoiceNumber.Trim(),
             SaleDate = SaleDate.Date,
             Amount = amount,
-            CommissionPercent = commissionPercent
+            CommissionPercent = commissionPercent,
+            CommissionPlanId = planId,
+            CommissionPlanSnapshotJson = planSnapshot
         };
 
         await _database.UpdateSaleAsync(sale, true);

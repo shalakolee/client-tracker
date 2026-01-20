@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage
+    x:Class="ClientTracker.Pages.CommissionPlanEditPage"
+    x:Name="CommissionPlanEditPageRoot"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:controls="clr-namespace:ClientTracker.Controls"
+    xmlns:services="clr-namespace:ClientTracker.Services"
+    Title="{Binding PageTitle}">
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <services:LocalizationKeyConverter x:Key="LocalizationKeyConverter" />
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <ContentPage.Background>
+        <AppThemeBinding Light="{StaticResource AppBackgroundBrush}" Dark="{StaticResource AppBackgroundDarkBrush}" />
+    </ContentPage.Background>
+
+    <ContentPage.Behaviors>
+        <controls:SwipeBackBehavior />
+    </ContentPage.Behaviors>
+
+    <Grid RowDefinitions="Auto,*">
+        <controls:TopBar NavigationMode="Back"
+            Title="{Binding PageTitle}"
+            Subtitle="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[CommissionPlan_EditSubtitle]}">
+            <controls:TopBar.RightContent>
+                <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Save]}" Command="{Binding SaveCommand}" Style="{StaticResource BaseButton}" />
+            </controls:TopBar.RightContent>
+        </controls:TopBar>
+
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Padding="{StaticResource PagePadding}" Spacing="16">
+                <Border BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource Gray950}}" StrokeThickness="0" Padding="16">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="20" />
+                    </Border.StrokeShape>
+                    <VerticalStackLayout Spacing="12">
+                        <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[CommissionPlan_DetailsTitle]}" Style="{StaticResource SectionTitle}" />
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[CommissionPlan_NameLabel]}" Style="{StaticResource MutedLabel}" />
+                            <Border Style="{StaticResource FormFieldContainer}">
+                                <Entry Text="{Binding Name}" Style="{StaticResource FormFieldEntry}" />
+                            </Border>
+                        </VerticalStackLayout>
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[CommissionPlan_DefaultLabel]}" Style="{StaticResource MutedLabel}" VerticalTextAlignment="Center" />
+                            <Switch Grid.Column="1" IsToggled="{Binding IsDefault}" HorizontalOptions="Start" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </Border>
+
+                <Border BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource Gray950}}" StrokeThickness="0" Padding="16">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="20" />
+                    </Border.StrokeShape>
+                    <VerticalStackLayout Spacing="12">
+                        <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[CommissionPlan_ClientTitle]}" Style="{StaticResource SectionTitle}" />
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[CommissionPlan_ModeLabel]}" Style="{StaticResource MutedLabel}" />
+                            <Border Style="{StaticResource FormFieldContainer}">
+                                <Picker ItemsSource="{Binding ClientModes}" SelectedItem="{Binding SelectedClientMode}" Style="{StaticResource FormFieldPicker}">
+                                    <Picker.ItemDisplayBinding>
+                                        <Binding Path="LabelKey" Converter="{StaticResource LocalizationKeyConverter}" />
+                                    </Picker.ItemDisplayBinding>
+                                </Picker>
+                            </Border>
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Spacing="6" IsVisible="{Binding IsClientOffsetsMode}">
+                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[CommissionPlan_OffsetsLabel]}" Style="{StaticResource MutedLabel}" />
+                            <Border Style="{StaticResource FormFieldContainer}">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                    <Label Text="{Binding ClientOffsetsSummary}" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" MaxLines="1" />
+                                    <Button Grid.Column="1"
+                                            Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Select]}"
+                                            Command="{Binding OpenClientOffsetsDialogCommand}"
+                                            Style="{StaticResource InlineButton}" />
+                                </Grid>
+                            </Border>
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Spacing="6" IsVisible="{Binding IsClientMonthlyMode}">
+                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[CommissionPlan_DaysLabel]}" Style="{StaticResource MutedLabel}" />
+                            <Border Style="{StaticResource FormFieldContainer}">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                    <Label Text="{Binding ClientDaysSummary}" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" MaxLines="1" />
+                                    <Button Grid.Column="1"
+                                            Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Select]}"
+                                            Command="{Binding OpenClientDaysDialogCommand}"
+                                            Style="{StaticResource InlineButton}" />
+                                </Grid>
+                            </Border>
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </Border>
+
+                <Border BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource Gray950}}" StrokeThickness="0" Padding="16">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="20" />
+                    </Border.StrokeShape>
+                    <VerticalStackLayout Spacing="12">
+                        <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[CommissionPlan_CommissionTitle]}" Style="{StaticResource SectionTitle}" />
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[CommissionPlan_ModeLabel]}" Style="{StaticResource MutedLabel}" />
+                            <Border Style="{StaticResource FormFieldContainer}">
+                                <Picker ItemsSource="{Binding CommissionModes}" SelectedItem="{Binding SelectedCommissionMode}" Style="{StaticResource FormFieldPicker}">
+                                    <Picker.ItemDisplayBinding>
+                                        <Binding Path="LabelKey" Converter="{StaticResource LocalizationKeyConverter}" />
+                                    </Picker.ItemDisplayBinding>
+                                </Picker>
+                            </Border>
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Spacing="6" IsVisible="{Binding IsCommissionOffsetsMode}">
+                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[CommissionPlan_OffsetsLabel]}" Style="{StaticResource MutedLabel}" />
+                            <Border Style="{StaticResource FormFieldContainer}">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                    <Label Text="{Binding CommissionOffsetsSummary}" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" MaxLines="1" />
+                                    <Button Grid.Column="1"
+                                            Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Select]}"
+                                            Command="{Binding OpenCommissionOffsetsDialogCommand}"
+                                            Style="{StaticResource InlineButton}" />
+                                </Grid>
+                            </Border>
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Spacing="6" IsVisible="{Binding IsCommissionMonthlyMode}">
+                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[CommissionPlan_DaysLabel]}" Style="{StaticResource MutedLabel}" />
+                            <Border Style="{StaticResource FormFieldContainer}">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                    <Label Text="{Binding CommissionDaysSummary}" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" MaxLines="1" />
+                                    <Button Grid.Column="1"
+                                            Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Select]}"
+                                            Command="{Binding OpenCommissionDaysDialogCommand}"
+                                            Style="{StaticResource InlineButton}" />
+                                </Grid>
+                            </Border>
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Spacing="6" IsVisible="{Binding IsCommissionMonthlyMode}">
+                            <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[CommissionPlan_DayHandlingLabel]}" Style="{StaticResource MutedLabel}" />
+                            <Border Style="{StaticResource FormFieldContainer}">
+                                <Picker ItemsSource="{Binding DayHandlingOptions}" SelectedItem="{Binding SelectedDayHandling}" Style="{StaticResource FormFieldPicker}">
+                                    <Picker.ItemDisplayBinding>
+                                        <Binding Path="LabelKey" Converter="{StaticResource LocalizationKeyConverter}" />
+                                    </Picker.ItemDisplayBinding>
+                                </Picker>
+                            </Border>
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </Border>
+
+                <Label Text="{Binding StatusMessage}" TextColor="{StaticResource Tertiary}">
+                    <Label.Triggers>
+                        <DataTrigger TargetType="Label" Binding="{Binding StatusMessage}" Value="">
+                            <Setter Property="IsVisible" Value="False" />
+                        </DataTrigger>
+                    </Label.Triggers>
+                </Label>
+
+                <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Save]}" Command="{Binding SaveCommand}" Style="{StaticResource BaseButton}" />
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <Grid Grid.RowSpan="2" IsVisible="{Binding IsSelectionDialogOpen}" BackgroundColor="Transparent">
+            <BoxView BackgroundColor="#66000000" Opacity="0.9">
+                <BoxView.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding CancelSelectionDialogCommand}" />
+                </BoxView.GestureRecognizers>
+            </BoxView>
+            <Border HorizontalOptions="End" VerticalOptions="Fill"
+                    WidthRequest="{OnIdiom Phone=320, Default=360}"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource Gray950}}"
+                    StrokeThickness="0">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="24,0,24,0" />
+                </Border.StrokeShape>
+                <Grid RowDefinitions="Auto,*,Auto" Padding="20" RowSpacing="16">
+                    <Label Text="{Binding SelectionDialogTitle}" Style="{StaticResource SectionTitle}" />
+                    <CollectionView Grid.Row="1" ItemsSource="{Binding SelectionDialogOptions}" SelectionMode="None">
+                        <CollectionView.ItemsLayout>
+                            <LinearItemsLayout Orientation="Vertical" ItemSpacing="8" />
+                        </CollectionView.ItemsLayout>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" Padding="4,6">
+                                    <CheckBox IsChecked="{Binding IsSelected}" VerticalOptions="Center" />
+                                    <Label Grid.Column="1" Text="{Binding Label}" VerticalTextAlignment="Center" />
+                                </Grid>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                    <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto">
+                        <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Cancel]}" Command="{Binding CancelSelectionDialogCommand}" Style="{StaticResource InlineButton}" />
+                        <Label Grid.Column="1" />
+                        <Button Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Action_Apply]}" Command="{Binding ApplySelectionDialogCommand}" Style="{StaticResource BaseButton}" Grid.Column="2" />
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+        <controls:LoadingOverlay Grid.RowSpan="2" ZIndex="99" />
+    </Grid>
+</ContentPage>
