@@ -39,8 +39,8 @@ public class DashboardViewModel : ViewModelBase
         {
             if (args.PropertyName == "Item[]" || args.PropertyName == nameof(LocalizationResourceManager.CurrentCulture))
             {
-                OnPropertyChanged(nameof(TotalSalesAmount));
-                OnPropertyChanged(nameof(OutstandingCommissionAmount));
+                OnPropertyChanged(nameof(TotalSalesAmountFormatted));
+                OnPropertyChanged(nameof(OutstandingCommissionAmountFormatted));
                 OnPropertyChanged(nameof(TrendRangeLabel));
             }
         };
@@ -67,7 +67,13 @@ public class DashboardViewModel : ViewModelBase
     public decimal TotalSalesAmount
     {
         get => _totalSalesAmount;
-        set => SetProperty(ref _totalSalesAmount, value);
+        set
+        {
+            if (SetProperty(ref _totalSalesAmount, value))
+            {
+                OnPropertyChanged(nameof(TotalSalesAmountFormatted));
+            }
+        }
     }
 
     public decimal TotalCommissionAmount
@@ -79,8 +85,17 @@ public class DashboardViewModel : ViewModelBase
     public decimal OutstandingCommissionAmount
     {
         get => _outstandingCommissionAmount;
-        set => SetProperty(ref _outstandingCommissionAmount, value);
+        set
+        {
+            if (SetProperty(ref _outstandingCommissionAmount, value))
+            {
+                OnPropertyChanged(nameof(OutstandingCommissionAmountFormatted));
+            }
+        }
     }
+
+    public string TotalSalesAmountFormatted => FormatCurrency(TotalSalesAmount);
+    public string OutstandingCommissionAmountFormatted => FormatCurrency(OutstandingCommissionAmount);
 
     public ObservableCollection<DashboardMonthSummary> MonthlySummaries { get; }
     public ObservableCollection<DashboardCommissionSummary> CommissionSummaries { get; }
@@ -209,6 +224,19 @@ public class DashboardViewModel : ViewModelBase
         TrendLabels = MonthlySummaries.Select(m => m.MonthLabel).ToArray();
         TrendSales = MonthlySummaries.Select(m => (double)m.SalesAmount).ToArray();
         TrendCommission = MonthlySummaries.Select(m => (double)m.CommissionAmount).ToArray();
+    }
+
+    private string FormatCurrency(decimal value)
+    {
+        try
+        {
+            var culture = CultureInfo.GetCultureInfo(_localization.CurrentCulture.Name);
+            return value.ToString("C", culture);
+        }
+        catch
+        {
+            return value.ToString("0.00", CultureInfo.InvariantCulture);
+        }
     }
 
     private (int index, DashboardCommissionSummary? summary) BuildCommissionSummaries(IReadOnlyCollection<Payment> payments)

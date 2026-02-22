@@ -648,8 +648,8 @@ public class UpdateService : INotifyPropertyChanged
 
     private Border CreateCard(View content)
     {
-        var background = GetThemeColor("SurfaceElevated", "Gray950", Colors.White);
-        var stroke = GetThemeColor("BorderSubtle", "Gray600", Colors.LightGray);
+        var background = GetThemeColor("SurfaceElevated", "Gray950", Colors.White, Color.FromArgb("#2D2D2D"));
+        var stroke = GetThemeColor("BorderSubtle", "Gray600", Colors.LightGray, Color.FromArgb("#404040"));
 
         return new Border
         {
@@ -662,22 +662,21 @@ public class UpdateService : INotifyPropertyChanged
         };
     }
 
-    private Color GetThemeColor(string lightKey, string darkKey, Color fallback)
+    private Color GetThemeColor(string lightKey, string darkKey, Color lightFallback, Color darkFallback)
     {
         var resources = Application.Current?.Resources;
-        if (resources is null)
-        {
-            return fallback;
-        }
-
         var isDark = Application.Current?.RequestedTheme == AppTheme.Dark;
-        var key = isDark ? darkKey : lightKey;
-        if (resources.TryGetValue(key, out var value) && value is Color color)
+
+        if (resources is not null)
         {
-            return color;
+            var key = isDark ? darkKey : lightKey;
+            if (resources.TryGetValue(key, out var value) && value is Color color)
+            {
+                return color;
+            }
         }
 
-        return fallback;
+        return isDark ? darkFallback : lightFallback;
     }
 
     private Task UpdateProgressAsync(Label statusLabel, ProgressBar progressBar, double progress)

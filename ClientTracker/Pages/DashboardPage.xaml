@@ -94,7 +94,7 @@
                         </Border.StrokeShape>
                         <VerticalStackLayout Spacing="6">
                             <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Dashboard_TotalRevenue]}" Style="{StaticResource MutedLabel}" />
-                            <Label Text="{Binding TotalSalesAmount, StringFormat='{}{0:C}'}" FontSize="26" FontAttributes="Bold" />
+                            <Label Text="{Binding TotalSalesAmountFormatted}" FontSize="26" FontAttributes="Bold" />
                         </VerticalStackLayout>
                     </Border>
 
@@ -107,7 +107,7 @@
                         </Border.StrokeShape>
                         <VerticalStackLayout Spacing="6">
                             <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Dashboard_OutstandingCommission]}" Style="{StaticResource MutedLabel}" />
-                            <Label Text="{Binding OutstandingCommissionAmount, StringFormat='{}{0:C}'}" FontSize="26" FontAttributes="Bold" />
+                            <Label Text="{Binding OutstandingCommissionAmountFormatted}" FontSize="26" FontAttributes="Bold" />
                         </VerticalStackLayout>
                     </Border>
                 </FlexLayout>
