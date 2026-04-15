@@ -28,7 +28,7 @@
         </controls:TopBar>
 
         <ScrollView Grid.Row="1">
-            <VerticalStackLayout Padding="{StaticResource PagePadding}" Spacing="16">
+            <VerticalStackLayout Style="{StaticResource ResponsivePageContent}">
             <Border BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource Gray950}}" StrokeThickness="0" Padding="16">
             <Border.StrokeShape>
                 <RoundRectangle CornerRadius="20" />
@@ -83,7 +83,6 @@
         <controls:LoadingOverlay Grid.RowSpan="2" ZIndex="99" />
     </Grid>
 </ContentPage>
-
 
 
 

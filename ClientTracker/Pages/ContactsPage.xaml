@@ -29,7 +29,7 @@
             SearchCommand="{Binding LoadCommand}" />
 
         <RefreshView Grid.Row="1" Command="{Binding LoadCommand}" IsRefreshing="{Binding IsBusy}">
-            <Grid RowDefinitions="Auto,Auto,*" Padding="{StaticResource PagePadding}" RowSpacing="16">
+            <Grid RowDefinitions="Auto,Auto,*" Style="{StaticResource ResponsivePageGrid}">
                 <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Title_Contacts]}" Style="{StaticResource SectionTitle}" />
 
                 <Border Grid.Row="1" BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource Gray950}}" StrokeThickness="0" Padding="16">

@@ -21,7 +21,7 @@
         </controls:TopBar>
 
         <ScrollView Grid.Row="1">
-            <VerticalStackLayout Padding="{StaticResource PagePadding}" Spacing="16">
+            <VerticalStackLayout Style="{StaticResource ResponsivePageContent}">
             <Frame Style="{StaticResource CardFrame}">
                 <VerticalStackLayout Spacing="12">
                     <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Sale_Editor]}" Style="{StaticResource SectionTitle}" />
@@ -74,7 +74,6 @@
         <controls:LoadingOverlay Grid.RowSpan="2" ZIndex="99" />
     </Grid>
 </ContentPage>
-
 
 
 

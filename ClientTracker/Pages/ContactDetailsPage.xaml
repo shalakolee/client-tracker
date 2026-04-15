@@ -23,7 +23,7 @@
 
         <RefreshView Grid.Row="1" Command="{Binding RefreshCommand}" IsRefreshing="{Binding IsBusy}">
             <ScrollView>
-                <VerticalStackLayout Padding="{StaticResource PagePadding}" Spacing="16">
+                <VerticalStackLayout Style="{StaticResource ResponsivePageContent}">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                 <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Title_ContactDetails]}" Style="{StaticResource SectionTitle}" />
                 <Button Grid.Column="1"
@@ -78,7 +78,6 @@
         <controls:LoadingOverlay Grid.RowSpan="2" ZIndex="99" />
     </Grid>
 </ContentPage>
-
 
 
 

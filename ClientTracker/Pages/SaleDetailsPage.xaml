@@ -25,7 +25,7 @@
 
         <RefreshView Grid.Row="1" Command="{Binding RefreshCommand}" IsRefreshing="{Binding IsBusy}">
             <ScrollView>
-                <VerticalStackLayout Padding="{StaticResource PagePadding}" Spacing="16">
+                <VerticalStackLayout Style="{StaticResource ResponsivePageContent}">
             <Frame Style="{StaticResource CardFrame}">
                 <VerticalStackLayout Spacing="12">
                     <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Sale_Editor]}" Style="{StaticResource SectionTitle}" />
@@ -125,7 +125,6 @@
         <controls:LoadingOverlay Grid.RowSpan="2" ZIndex="99" />
     </Grid>
 </ContentPage>
-
 
 
 

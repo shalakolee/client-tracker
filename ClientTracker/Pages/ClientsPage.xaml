@@ -29,7 +29,7 @@
             SearchCommand="{Binding SearchCommand}" />
 
         <RefreshView Grid.Row="1" Command="{Binding LoadCommand}" IsRefreshing="{Binding IsBusy}">
-            <Grid RowDefinitions="Auto,*" Padding="{StaticResource PagePadding}" RowSpacing="16">
+            <Grid RowDefinitions="Auto,*" Style="{StaticResource ResponsivePageGrid}">
                 <Grid ColumnDefinitions="*,Auto">
                     <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
                         <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Title_Clients]}" Style="{StaticResource SectionTitle}" />
@@ -198,6 +198,5 @@
         <controls:LoadingOverlay Grid.RowSpan="2" ZIndex="99" />
     </Grid>
 </ContentPage>
-
 
 
