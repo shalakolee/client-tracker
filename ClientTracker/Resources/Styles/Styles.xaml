@@ -28,6 +28,10 @@
         </Setter>
     </Style>
 
+    <Style TargetType="VerticalStackLayout" x:Key="ResponsivePageContentSpacious" BasedOn="{StaticResource ResponsivePageContent}">
+        <Setter Property="Spacing" Value="18" />
+    </Style>
+
     <Style TargetType="Grid" x:Key="ResponsivePageGrid">
         <Setter Property="Padding" Value="{StaticResource PagePadding}" />
         <Setter Property="RowSpacing" Value="16" />

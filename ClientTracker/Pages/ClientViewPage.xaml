@@ -31,7 +31,7 @@
 
         <RefreshView Grid.Row="1" Command="{Binding RefreshCommand}" IsRefreshing="{Binding IsBusy}">
             <ScrollView>
-                <VerticalStackLayout Style="{StaticResource ResponsivePageContent}">
+                <VerticalStackLayout Style="{StaticResource ResponsivePageContentSpacious}">
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                     <Label Text="{Binding Source={x:Static services:LocalizationResourceManager.Instance}, Path=[Title_Client]}" Style="{StaticResource SectionTitle}" />
                     <Button Grid.Column="1"
